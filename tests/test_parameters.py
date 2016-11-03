@@ -7,11 +7,12 @@ sys.path.append('../')
 from backend.parameters import Parameters
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
-from mock import patch, MagicMock, Mock
+from mock import patch, MagicMock, Mock, ANY
 from datetime import datetime
 import pytz
+import time
 
-class TestParameters(unittest.TestCase):
+class TestsParameters(unittest.TestCase):
 
     def setUp(self):
         self.session = session.TestSession(self)
@@ -60,6 +61,48 @@ class TestParameters(unittest.TestCase):
         })
         self.module.set_country.assert_called()
         self.module.set_sun.assert_called()
+
+    @patch('backend.parameters.time.time', Mock(return_value=1607538850))
+    @patch('backend.parameters.Timer')
+    @patch('backend.parameters.Task')
+    def test_on_start_launch_time_task(self, mock_task, mock_timer):
+        self.init_session()
+
+        # mocked time = 9/12/2020 à 18:34:10, so cleep seconds synchronized with system, it must delay of 50 seconds
+        mock_timer.assert_called_with(50, mock_task.return_value.start)
+        self.assertTrue(mock_timer.return_value.start.called)
+
+    @patch('backend.parameters.time.time', Mock(return_value=1607538850))
+    @patch('backend.parameters.Task')
+    def test_on_start_sync_time_first_launch(self, mock_task):
+        self.init_session()
+
+        self.assertEqual(mock_task.call_count, 1)
+
+    @patch('backend.parameters.time.time', Mock(return_value=1575916450))
+    @patch('backend.parameters.Task')
+    def test_on_start_sync_time_already_launched_invalid_time(self, mock_task):
+        self.init_session(start=False)
+        self.module._get_config_field = Mock(side_effect=[{}, {}, 'france', 'Europe/Paris', {'latitude': 52.2040, 'longitude': 0.1208}, 1607538850])
+
+        self.session.start_module(self.module)
+
+        logging.debug(self.module._get_config_field.call_args_list)
+        self.assertEqual(mock_task.call_count, 2)
+        mock_task.assert_any_call(Parameters.NTP_SYNC_INTERVAL, self.module._sync_time_task, ANY)
+        self.assertTrue(mock_task.return_value.start.called)
+
+    @patch('backend.parameters.time.time', Mock(return_value=1607538850))
+    @patch('backend.parameters.Task')
+    def test_on_start_sync_time_already_launched_valid_time(self, mock_task):
+        self.init_session(start=False)
+        self.module._get_config_field = Mock(side_effect=[{}, {}, 'france', 'Europe/Paris', {'latitude': 52.2040, 'longitude': 0.1208}, 1607538150])
+
+        self.session.start_module(self.module)
+
+        logging.debug(mock_task.call_args_list)
+        self.assertEqual(mock_task.call_count, 1)
+        self.assertFalse(mock_task.return_value.start.called)
 
     @patch('backend.parameters.Sun')
     def test_get_module_config_default(self, mock_sun):
@@ -146,12 +189,32 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(devices[uid]['weekday'], 6)
         self.assertEqual(devices[uid]['weekday_literal'], 'sunday')
 
+    def test_sync_time_task_sync_ok(self):
+        self.init_session()
+        self.module.sync_time = Mock(return_value=True)
+        self.module.sync_time_task = Mock()
+
+        self.module._sync_time_task()
+        
+        self.assertTrue(self.module.sync_time_task.stop.called)
+
+    def test_sync_time_task_sync_ko(self):
+        self.init_session()
+        self.module.sync_time = Mock(return_value=False)
+        self.module.sync_time_task = Mock()
+
+        self.module._sync_time_task()
+        
+        self.assertFalse(self.module.sync_time_task.stop.called)
+
     @patch('time.time')
     def test_time_task_now_event(self, mock_time):
         mock_time.return_value = 1591645808
         self.init_session()
+        self.module._set_config_field = Mock()
 
         self.module._time_task()
+
         self.assertTrue(self.session.event_called_with('parameters.time.now', {
             'hour': 21,
             'day': 8,
@@ -165,6 +228,7 @@ class TestParameters(unittest.TestCase):
             'sunrise': self.module.suns['sunrise'],
             'minute': 50
         }))
+        self.module._set_config_field.assert_called_with('timestamp', 1591645808)
 
     @patch('time.time')
     def test_time_task_sunrise_event(self, mock_time):
@@ -405,9 +469,18 @@ class TestParameters(unittest.TestCase):
 
         self.assertTrue(self.module.set_timezone())
         mock_tzfinder.return_value.closest_timezone_at.assert_called_with(lat=52.204, lng=0.1208)
+
+    @patch('backend.parameters.Console')
+    def test_sync_time(self, mock_console):
+        self.init_session()
+
+        self.module.sync_time()
+
+        mock_console.return_value.command.assert_called_with('/usr/sbin/ntpdate-debian', timeout=60.0)
+
         
 
-#do not remove code below, otherwise test won't run
+# do not remove code below, otherwise test won't run
 if __name__ == '__main__':
     # coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_parameters.py; coverage report -m -i
     unittest.main()

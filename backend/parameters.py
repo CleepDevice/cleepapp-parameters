@@ -6,6 +6,7 @@ import time
 import copy
 import re
 from datetime import datetime
+from threading import Timer
 import reverse_geocode
 from timezonefinder import TimezoneFinder
 from pytz import timezone
@@ -58,12 +59,14 @@ class Parameters(CleepModule):
             'country': 'United Kingdom',
             'alpha2': 'GB'
         },
-        'timezone': 'Europe/London'
+        'timezone': 'Europe/London',
+        'timestamp': 0
     }
 
     SYSTEM_ZONEINFO_DIR = '/usr/share/zoneinfo/'
     SYSTEM_LOCALTIME = '/etc/localtime'
     SYSTEM_TIMEZONE = '/etc/timezone'
+    NTP_SYNC_INTERVAL = 300
 
     def __init__(self, bootstrap, debug_enabled):
         """
@@ -91,6 +94,7 @@ class Parameters(CleepModule):
         self.timezone_name = None
         self.timezone = None
         self.time_task = None
+        self.sync_time_task = None
         self.__clock_uuid = None
         # code from https://stackoverflow.com/a/106223
         self.__hostname_pattern = r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
@@ -141,9 +145,18 @@ class Parameters(CleepModule):
         """
         Module starts
         """
-        # launch time task
+        # restore last saved timestamp if system time seems very old (NTP error)
+        saved_timestamp = self._get_config_field('timestamp')
+        if (int(time.time()) - saved_timestamp) < 0:
+            # it seems NTP sync failed, launch timer to regularly try to sync device time
+            self.sync_time_task = Task(Parameters.NTP_SYNC_INTERVAL, self._sync_time_task, self.logger)
+            self.sync_time_task.start()
+
+        # launch time task (synced to current seconds)
+        seconds = 60 - (int(time.time()) % 60)
         self.time_task = Task(60.0, self._time_task, self.logger)
-        self.time_task.start()
+        timer = Timer(0 if seconds == 60 else seconds, self.time_task.start)
+        timer.start()
 
     def _on_stop(self):
         """
@@ -245,6 +258,17 @@ class Parameters(CleepModule):
             'weekday_literal': weekday_literal
         }
 
+    def _sync_time_task(self):
+        """
+        Sync time task. It is used to try to sync device time using NTP server.
+
+        Note:
+            This task is launched only if device time is insane.
+        """
+        if self.sync_time():
+            self.logger.info('Time synchronized with NTP server')
+            self.sync_time_task.stop()
+
     def _time_task(self):
         """
         Time task used to refresh time
@@ -272,6 +296,9 @@ class Parameters(CleepModule):
         # update sun times after midnight
         if now_formatted['hour'] == 0 and now_formatted['minute'] == 5:
             self.set_sun()
+
+        # save last timestamp in config to restore it after a reboot and NTP sync failed (no internet)
+        self._set_config_field('timestamp', now_formatted['timestamp'])
 
     def set_hostname(self, hostname):
         """
@@ -520,4 +547,17 @@ class Parameters(CleepModule):
             string: current timezone name
         """
         return self._get_config_field('timezone')
+
+    def sync_time(self):
+        """
+        Synchronize device time using NTP server
+
+        Note:
+            This command may lasts some seconds
+
+        Returns:
+            bool: True if NTP sync succeed, False otherwise
+        """
+        console = Console()
+        console.command('/usr/sbin/ntpdate-debian', timeout=60.0)
 
