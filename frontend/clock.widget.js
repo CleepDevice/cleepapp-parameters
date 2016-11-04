@@ -1,8 +1,11 @@
 /**
- * Clock widget directive
+ * Clock widget
  * Display clock dashboard widget
  */
-var widgetClockDirective = function(parametersService) {
+angular
+.module('Cleep')
+.directive('clockWidget', ['parametersService',
+function(parametersService) {
 
     var widgetClockController = ['$scope', function($scope) {
         var self = this;
@@ -19,8 +22,5 @@ var widgetClockDirective = function(parametersService) {
         controller: widgetClockController,
         controllerAs: 'widgetCtl'
     };
-};
-
-var Cleep = angular.module('Cleep');
-Cleep.directive('widgetClockDirective', ['parametersService', widgetClockDirective]);
+}]);
 

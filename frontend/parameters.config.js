@@ -1,11 +1,13 @@
 /**
- * Parameters config directive
+ * Parameters config component
  * Handle parameters configuration
  */
-var parametersConfigDirective = function(toast, parametersService, cleepService, $timeout) {
+angular
+.module('Cleep')
+.directive('parametersConfigComponent', ['toastService', 'parametersService', 'cleepService', '$timeout',
+function(toast, parametersService, cleepService, $timeout) {
 
-    var parametersController = ['$scope', function($scope)
-    {
+    var parametersController = ['$scope', function($scope) {
         var self = this;
         self.tabIndex = 'hostname';
         self.sunset = null;
@@ -29,8 +31,7 @@ var parametersConfigDirective = function(toast, parametersService, cleepService,
         /**
          * Set hostname
          */
-        self.setHostname = function()
-        {
+        self.setHostname = function() {
             parametersService.setHostname(self.hostname)
                 .then(function(resp) {
                     return cleepService.reloadModuleConfig('parameters');
@@ -44,9 +45,8 @@ var parametersConfigDirective = function(toast, parametersService, cleepService,
         /**
          * Set position
          */
-        self.setPosition = function()
-        {
-            //check values
+        self.setPosition = function() {
+            // check values
             if( !$scope.cleepposition || !$scope.cleepposition.lat || !$scope.cleepposition.lng ) {
                 toast.info('Please select position before setting position');
                 return;
@@ -70,8 +70,7 @@ var parametersConfigDirective = function(toast, parametersService, cleepService,
         /**
          * Update controller config
          */
-        self.updateConfig = function(config)
-        {
+        self.updateConfig = function(config) {
             self.position = config.position;
             self.hostname = config.hostname;
             self.sun = config.sun;
@@ -82,14 +81,13 @@ var parametersConfigDirective = function(toast, parametersService, cleepService,
         /**
          * Init controller
          */
-        self.init = function()
-        {
+        self.$onInit = function() {
             cleepService.getModuleConfig('parameters')
                 .then(function(config) {
-                    //update config
+                    // update config
                     self.updateConfig(config);
 
-                    //init leaflet
+                    // init leaflet
                     angular.extend($scope, {
                         cleepposition: {
                             lat: self.position.latitude,
@@ -106,20 +104,12 @@ var parametersConfigDirective = function(toast, parametersService, cleepService,
         };
     }];
 
-    var parametersLink = function(scope, element, attrs, controller) {
-        controller.init();
-    };
-
     return {
         templateUrl: 'parameters.config.html',
         replace: true,
         scope: true,
         controller: parametersController,
         controllerAs: 'parametersCtl',
-        link: parametersLink
     };
-};
-
-var Cleep = angular.module('Cleep');
-Cleep.directive('parametersConfigDirective', ['toastService', 'parametersService', 'cleepService', '$timeout', parametersConfigDirective]);
+}]);
 

@@ -2,7 +2,10 @@
  * Parameters service
  * Handle parameters module requests
  */
-var parametersService = function($rootScope, rpcService, cleepService) {
+angular
+.module('Cleep')
+.service('parametersService', ['$rootScope', 'rpcService', 'cleepService',
+function($rootScope, rpcService, cleepService) {
     var self = this;
     
     /**
@@ -42,8 +45,5 @@ var parametersService = function($rootScope, rpcService, cleepService) {
         }
     });
 
-};
-    
-var Cleep = angular.module('Cleep');
-Cleep.service('parametersService', ['$rootScope', 'rpcService', 'cleepService', parametersService]);
+}]);
 
