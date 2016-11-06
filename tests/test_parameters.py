@@ -21,7 +21,7 @@ class TestParameters(unittest.TestCase):
         # clean session
         self.session.clean()
 
-    def init_context(self, mock_sun=None,
+    def init_session(self, mock_sun=None,
         mock_hostname=None, set_hostname_return_value=True, get_hostname_return_value='dummy',
         mock_tzfinder=None, tzfinder_timezoneat_side_effect=None, tzfinder_timezoneat_return_value=None):
         if mock_sun:
@@ -47,9 +47,11 @@ class TestParameters(unittest.TestCase):
         self.module.parameters_hostname_update = MagicMock()
         self.module.parameters_country_update = MagicMock()
 
+        self.session.start_module(self.module)
+
     @patch('backend.parameters.Sun')
     def test_get_module_config_default(self, mock_sun):
-        self.init_context(mock_sun=mock_sun)
+        self.init_session(mock_sun=mock_sun)
         conf = self.module.get_module_config()
         logging.debug('Conf: %s' % conf)
         self.assertTrue('sun' in conf)
@@ -71,7 +73,7 @@ class TestParameters(unittest.TestCase):
 
     @patch('time.time', MagicMock(return_value=1591818206))
     def test_get_module_devices(self):
-        self.init_context()
+        self.init_session()
         devices = self.module.get_module_devices()
         logging.debug('Devices: %s' % devices)
 
@@ -95,7 +97,7 @@ class TestParameters(unittest.TestCase):
     @patch('time.time')
     def test_get_module_devices_weekdays(self, mock_time):
         mock_time.return_value = 1591645808
-        self.init_context()
+        self.init_session()
         devices = self.module.get_module_devices()
         uid = list(devices.keys())[0]
 
@@ -135,7 +137,7 @@ class TestParameters(unittest.TestCase):
     @patch('time.time')
     def test_time_task_now_event(self, mock_time):
         mock_time.return_value = 1591645808
-        self.init_context()
+        self.init_session()
 
         self.module._time_task()
         self.assertTrue(self.module.parameters_time_now.send.called)
@@ -159,7 +161,7 @@ class TestParameters(unittest.TestCase):
     def test_time_task_sunrise_event(self, mock_time):
         ts = 1591645808
         mock_time.return_value = ts
-        self.init_context()
+        self.init_session()
         self.module.sunrise = datetime.fromtimestamp(ts)
 
         self.module._time_task()
@@ -169,7 +171,7 @@ class TestParameters(unittest.TestCase):
     def test_time_task_sunset_event(self, mock_time):
         ts = 1591645808
         mock_time.return_value = ts
-        self.init_context()
+        self.init_session()
         self.module.sunset = datetime.fromtimestamp(ts)
 
         self.module._time_task()
@@ -179,7 +181,7 @@ class TestParameters(unittest.TestCase):
     def test_time_task_update_sun_after_midnight(self, mock_time):
         ts = 1591653900 # 00:05
         mock_time.return_value = ts
-        self.init_context()
+        self.init_session()
         self.module.set_sun = MagicMock()
 
         self.module._time_task()
@@ -187,7 +189,7 @@ class TestParameters(unittest.TestCase):
 
     @patch('cleep.libs.configs.hostname.Hostname')
     def test_set_hostname_succeed(self, mock_hostname):
-        self.init_context(mock_hostname=mock_hostname)
+        self.init_session(mock_hostname=mock_hostname)
         
         self.assertTrue(self.module.set_hostname('dummy'))
         self.assertTrue(self.module.parameters_hostname_update.send.called)
@@ -199,13 +201,13 @@ class TestParameters(unittest.TestCase):
 
     @patch('backend.parameters.Hostname')
     def test_set_hostname_failed(self, mock_hostname):
-        self.init_context(mock_hostname=mock_hostname, set_hostname_return_value=False)
+        self.init_session(mock_hostname=mock_hostname, set_hostname_return_value=False)
         
         self.assertFalse(self.module.set_hostname('dummy'))
         self.assertFalse(self.module.parameters_hostname_update.send.called)
 
     def test_set_hostname_invalid_name(self):
-        self.init_context()
+        self.init_session()
 
         with self.assertRaises(InvalidParameter):
             self.module.set_hostname('dummy?')
@@ -218,18 +220,18 @@ class TestParameters(unittest.TestCase):
 
     @patch('backend.parameters.Hostname')
     def test_get_hostname(self, mock_hostname):
-        self.init_context(mock_hostname=mock_hostname, get_hostname_return_value='hello')
+        self.init_session(mock_hostname=mock_hostname, get_hostname_return_value='hello')
 
         self.assertEqual(self.module.get_hostname(), 'hello')
 
     def test_get_position(self):
-        self.init_context()
+        self.init_session()
         position = self.module.get_position()
         self.assertTrue('latitude' in position)
         self.assertTrue('longitude' in position)
 
     def test_set_position(self):
-        self.init_context()
+        self.init_session()
         self.module.set_timezone = MagicMock()
         self.module.set_country = MagicMock()
         self.module.set_sun = MagicMock()
@@ -244,13 +246,13 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(position['longitude'], 2.2907284)
 
     def test_get_country(self):
-        self.init_context()
+        self.init_session()
         country = self.module.get_country()
         self.assertEqual(country['alpha2'], 'GB')
         self.assertEqual(country['country'], 'United Kingdom')
 
     def test_set_country(self):
-        self.init_context()
+        self.init_session()
         original_set_country = self.module.set_country
         self.module.set_timezone = MagicMock()
         self.module.set_country = MagicMock()
@@ -274,13 +276,13 @@ class TestParameters(unittest.TestCase):
     @patch('backend.parameters.reverse_geocode')
     def test_set_country_exception(self, mock_reverse_geo):
         mock_reverse_geo.search.side_effect = Exception('Test exception')
-        self.init_context()
+        self.init_session()
 
         # should not failed
         self.module.set_country()
 
     def test_set_country_no_position(self):
-        self.init_context()
+        self.init_session()
         self.module._set_config_field('position', {
             'latitude': 0,
             'longitude': 0
@@ -289,7 +291,7 @@ class TestParameters(unittest.TestCase):
         self.module.set_country()
 
     def test_set_timezone(self):
-        self.init_context()
+        self.init_session()
         original_set_timezone = self.module.set_timezone
         self.module.set_timezone = MagicMock()
         self.module.set_country = MagicMock()
@@ -300,7 +302,7 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(self.module.set_timezone())
 
     def test_set_timezone_no_position(self):
-        self.init_context()
+        self.init_session()
         self.module._set_config_field('position', {
             'latitude': 0,
             'longitude': 0
@@ -310,19 +312,19 @@ class TestParameters(unittest.TestCase):
 
     @patch('backend.parameters.TimezoneFinder')
     def test_set_timezone_timezonefinder_exception(self, mock_tzfinder):
-        self.init_context(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=Exception('Test exception'))
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=Exception('Test exception'))
 
         self.assertFalse(self.module.set_timezone())
 
     @patch('backend.parameters.TimezoneFinder')
     def test_set_timezone_timezonefinder_valueerror(self, mock_tzfinder):
-        self.init_context(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=ValueError('Test exception'))
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=ValueError('Test exception'))
 
         self.assertFalse(self.module.set_timezone())
 
     @patch('backend.parameters.TimezoneFinder')
     def test_set_timezone_unable_set_config(self, mock_tzfinder):
-        self.init_context(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value='Europe/Paris')
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value='Europe/Paris')
 
         self.module._set_config_field = Mock(return_value=False)
         with self.assertRaises(CommandError) as cm:
@@ -331,21 +333,21 @@ class TestParameters(unittest.TestCase):
 
     @patch('backend.parameters.TimezoneFinder')
     def test_set_timezone_invalid_timezone(self, mock_tzfinder):
-        self.init_context(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value='Europe/Dummy')
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value='Europe/Dummy')
 
         with self.assertRaises(CommandError) as cm:
             self.module.set_timezone()
         self.assertEqual(str(cm.exception), 'No system file found for "Europe/Dummy" timezone')
 
     def test_set_timezone_unable_write_system_file(self):
-        self.init_context()
+        self.init_session()
 
         self.module.cleep_filesystem.write_data = Mock(return_value=False)
         self.assertFalse(self.module.set_timezone())
 
     @patch('backend.parameters.Console')
     def test_set_timezone_command_failed(self, mock_console):
-        self.init_context()
+        self.init_session()
 
         mock_console.return_value.command.return_value = {'returncode': 1, 'stderr': 'Test error'}
         self.assertFalse(self.module.set_timezone())
@@ -353,6 +355,6 @@ class TestParameters(unittest.TestCase):
 
 #do not remove code below, otherwise test won't run
 if __name__ == '__main__':
-    # coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_parameters.py; coverage report -m
+    # coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_parameters.py; coverage report -m -i
     unittest.main()
     
