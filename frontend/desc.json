@@ -8,8 +8,8 @@
         "services": ["parameters.service.js"]
     },
     "config": {
-        "js": ["parameters.directive.js", "leaflet.js", "angular-simple-logger.min.js", "ui-leaflet.min.no-header.js"],
+        "js": ["parameters.config.js", "leaflet.js", "angular-simple-logger.min.js", "ui-leaflet.min.no-header.js"],
         "css": ["leaflet.css"],
-        "html": ["parameters.directive.html"]
+        "html": ["parameters.config.html"]
     }
 }
