@@ -111,7 +111,7 @@ var parametersConfigDirective = function(toast, parametersService, raspiotServic
     };
 
     return {
-        templateUrl: 'parameters.directive.html',
+        templateUrl: 'parameters.config.html',
         replace: true,
         scope: true,
         controller: parametersController,
