@@ -31,7 +31,7 @@ class Parameters(RaspIotModule):
         python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = u'Cleep'
-    MODULE_VERSION = u'1.0.0'
+    MODULE_VERSION = u'1.0.1'
     MODULE_CATEGORY = u'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []
