@@ -434,7 +434,10 @@ class Parameters(RaspIotModule):
             zoneinfo = os.path.join(self.SYSTEM_ZONEINFO_DIR, timezone)
             self.logger.debug(u'Checking zoneinfo file: %s' % zoneinfo)
             if os.path.exists(zoneinfo):
+                self.logger.debug(u'zoneinfo file "%s" exists' % zoneinfo)
                 self.cleep_filesystem.rm(self.SYSTEM_LOCALTIME)
+
+                self.logger.debug(u'Writing timezone "%s" in "%s"' % (timezone, self.SYSTEM_TIMEZONE))
                 if not self.cleep_filesystem.write_data(self.SYSTEM_TIMEZONE, u'%s' % timezone):
                     self.logger.error(u'Unable to write timezone data on "%s". System timezone is not configured!' % self.SYSTEM_TIMEZONE)
                     return False
