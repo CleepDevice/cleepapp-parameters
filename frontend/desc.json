@@ -1,11 +1,8 @@
 {
     "icon": "settings",
-    "system": {
-        "widgets": {
-            "js": ["clock.widget.js"],
-            "html": ["clock.widget.html"]
-        },
-        "services": ["parameters.service.js"]
+    "global": {
+        "js": ["clock.widget.js", "parameters.service.js"],
+        "html": ["clock.widget.html"]
     },
     "config": {
         "js": ["parameters.config.js", "leaflet.js", "angular-simple-logger.min.js", "ui-leaflet.min.no-header.js"],
