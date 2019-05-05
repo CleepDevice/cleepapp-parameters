@@ -29,7 +29,7 @@ var parametersService = function($rootScope, rpcService, raspiotService) {
     /**
      * Catch time event
      */
-    $rootScope.$on('system.time.now', function(event, uuid, params) {
+    $rootScope.$on('parameters.time.now', function(event, uuid, params) {
         for( var i=0; i<raspiotService.devices.length; i++ )
         {
             if( raspiotService.devices[i].uuid==uuid )
