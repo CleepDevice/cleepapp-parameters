@@ -6,7 +6,7 @@ import logging
 import time
 import copy
 from raspiot.raspiot import RaspIotModule
-from raspiot.utils import CommandError
+from raspiot.utils import CommandError, InvalidParameter
 from raspiot.libs.configs.hostname import Hostname
 from raspiot.libs.internals.sun import Sun
 from raspiot.libs.internals.console import Console
@@ -93,11 +93,11 @@ class Parameters(RaspIotModule):
         self.__hostname_pattern = r'^[a-zA-Z][0-9a-zA-Z\-]{3,}[^-]$'
 
         #events
-        self.systemTimeNow = self._get_event(u'system.time.now')
-        self.systemTimeSunrise = self._get_event(u'system.time.sunrise')
-        self.systemTimeSunset = self._get_event(u'system.time.sunset')
-        self.systemHostnameUpdate = self._get_event(u'system.hostname.update')
-        self.systemCountryUpdate = self._get_event(u'system.country.update')
+        self.parameters_time_now = self._get_event(u'parameters.time.now')
+        self.parameters_time_sunrise = self._get_event(u'parameters.time.sunrise')
+        self.parameters_time_sunset = self._get_event(u'parameters.time.sunset')
+        self.parameters_hostname_update = self._get_event(u'parameters.hostname.update')
+        self.parameters_country_update = self._get_event(u'parameters.country.update')
 
     def _configure(self):
         """
@@ -142,6 +142,9 @@ class Parameters(RaspIotModule):
     def get_module_config(self):
         """
         Get full module configuration
+
+        Returns:
+            dict: module configuration
         """
         config = {}
 
@@ -158,7 +161,7 @@ class Parameters(RaspIotModule):
         Return clock as parameters device
 
         Returns:
-            dict: devices
+            dict: module devices
         """
         devices = super(Parameters, self).get_module_devices()
         
@@ -182,6 +185,7 @@ class Parameters(RaspIotModule):
 
         Returns:
             dict: time data::
+
                 {
                     timestamp (int): current timestamp
                     iso (string): current datetime in iso 8601 format
@@ -193,6 +197,7 @@ class Parameters(RaspIotModule):
                     weekday (int): 0=monday, 1=tuesday... 6=sunday
                     weekday_literal (string): english literal weekday value (monday, tuesday, ...)
                 }
+
         """
         #current time
         if not now:
@@ -240,20 +245,17 @@ class Parameters(RaspIotModule):
             u'sunrise': self.suns[u'sunrise'],
             u'sunset': self.suns[u'sunset']
         })
-        self.systemTimeNow.send(params=now_event_params, device_id=self.__clock_uuid)
-        self.systemTimeNow.render([u'sound', u'display'], params=now_formatted)
+        self.parameters_time_now.send(params=now_event_params, device_id=self.__clock_uuid)
 
         #send sunrise event
         if self.sunrise:
             if now_formatted[u'hour']==self.sunrise.hour and now_formatted[u'minute']==self.sunrise.minute:
-                self.systemTimeSunrise.send(device_id=self.__clock_uuid)
-                self.systemTimeSunrise.render([u'display', u'sound'], params=self.__clock_uuid)
+                self.parameters_time_sunrise.send(device_id=self.__clock_uuid)
 
         #send sunset event
         if self.sunset:
             if now_formatted[u'hour']==self.sunset.hour and now_formatted[u'minute']==self.sunset.minute:
-                self.systemTimeSunset.send(device_id=self.__clock_uuid)
-                self.systemTimeSunset.render([u'display', u'sound'], params=self.__clock_uuid)
+                self.parameters_time_sunset.send(device_id=self.__clock_uuid)
 
         #update sun times after midnight
         if now_formatted[u'hour']==0 and now_formatted[u'minute']==5:
@@ -266,19 +268,22 @@ class Parameters(RaspIotModule):
         Args:
             hostname (string): hostname
 
-        Return:
+        Returns:
             bool: True if hostname saved successfully, False otherwise
+
+        Raises:
+            InvalidParameter: if hostname has invalid format
         """
         #check hostname
         if re.match(self.__hostname_pattern, hostname) is None:
-            raise CommandError(u'Hostname is not valid')
+            raise InvalidParameter(u'Hostname is not valid')
 
         #update hostname
         res = self.hostname.set_hostname(hostname)
 
         #send event to update hostname on all devices
         if res:
-            self.systemHostnameUpdate.send(params={u'hostname': hostname})
+            self.parameters_hostname_update.send(params={u'hostname': hostname})
 
         return res
 
@@ -287,7 +292,7 @@ class Parameters(RaspIotModule):
         Return raspi hostname
 
         Returns:
-            string: raspi hostname
+            string: raspberry pi hostname
         """
         return self.hostname.get_hostname()
 
@@ -298,6 +303,9 @@ class Parameters(RaspIotModule):
         Args:
             latitude (float): latitude
             longitude (float): longitude
+
+        Raises:
+            CommandError: if error occured during position saving
         """
         #save new position
         position = {
@@ -319,10 +327,12 @@ class Parameters(RaspIotModule):
 
         Returns:
             dict: position coordinates::
+
                 {
                     latitude (float),
                     longitude (float)
                 }
+
         """
         return self._get_config_field(u'position')
 
@@ -332,10 +342,12 @@ class Parameters(RaspIotModule):
 
         Returns:
             dict: sunset/sunrise timestamps::
+
                 {
                     sunrise (int),
                     sunset (int)
                 }
+
         """
         return self.suns
 
@@ -389,7 +401,7 @@ class Parameters(RaspIotModule):
                 self._set_config_field(u'country', country)
 
                 #send event
-                self.systemCountryUpdate.send(params=country);
+                self.parameters_country_update.send(params=country);
 
             except:
                 self.logger.exception(u'Unable to find country for position %s:' % position)
@@ -401,12 +413,20 @@ class Parameters(RaspIotModule):
         """
         Get country from position
 
+        Returns:
+            string: return country name (english)
         """
         return self._get_config_field(u'country')
 
     def set_timezone(self):
 	"""
         Set timezone according to coordinates
+
+        Returns:
+            bool: True if function succeed, False otherwise
+
+        Raises:
+            CommandError: if unable to save timezone
         """
         #get position
         position = self._get_config_field(u'position')
