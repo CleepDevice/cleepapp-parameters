@@ -4,7 +4,7 @@
 from raspiot.events.formatter import Formatter
 from raspiot.events.soundTextToSpeechProfile import SoundTextToSpeechProfile
 
-class SystemTimeToTextToSpeechFormatter(Formatter):
+class TimeToTextToSpeechFormatter(Formatter):
     """
     Current time data to TextToSpeechProfile
     """
