@@ -8,14 +8,14 @@ class TimeToDisplayAddOrReplaceMessageFormatter(Formatter):
     """
     Time data to DisplayAddOrReplaceProfile
     """
-    def __init__(self, events_factory):
+    def __init__(self, events_broker):
         """
         Constuctor
 
         Args:
-            events_factory (EventsFactory): events factory instance
+            events_broker (EventsBroker): events broker instance
         """
-        Formatter.__init__(self, events_factory, u'parameters.time.now', DisplayAddOrReplaceMessageProfile())
+        Formatter.__init__(self, events_broker, u'parameters.time.now', DisplayAddOrReplaceMessageProfile())
 
     def _fill_profile(self, event_values, profile):
         """

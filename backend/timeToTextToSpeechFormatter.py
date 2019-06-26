@@ -8,14 +8,14 @@ class TimeToTextToSpeechFormatter(Formatter):
     """
     Current time data to TextToSpeechProfile
     """
-    def __init__(self, events_factory):
+    def __init__(self, events_broker):
         """
         Constructor
 
         Args:
-            events_factory (EventsFactory): events factory instance
+            events_broker (EventsBroker): events broker instance
         """
-        Formatter.__init__(self, events_factory, u'parameters.time.now', SoundTextToSpeechProfile())
+        Formatter.__init__(self, events_broker, u'parameters.time.now', SoundTextToSpeechProfile())
 
     def _fill_profile(self, event_values, profile):
         """
