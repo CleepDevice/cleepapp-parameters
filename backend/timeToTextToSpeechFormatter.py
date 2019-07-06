@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from raspiot.events.formatter import Formatter
-from raspiot.events.soundTextToSpeechProfile import SoundTextToSpeechProfile
+from raspiot.libs.internals.formatter import Formatter
+from raspiot.profiles.soundTextToSpeechProfile import SoundTextToSpeechProfile
 
 class TimeToTextToSpeechFormatter(Formatter):
     """

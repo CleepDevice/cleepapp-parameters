@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from raspiot.events.event import Event
+from raspiot.libs.internals.event import Event
 
 class ParametersTimeNowEvent(Event):
     """
@@ -10,6 +10,19 @@ class ParametersTimeNowEvent(Event):
 
     EVENT_NAME = u'parameters.time.now'
     EVENT_SYSTEM = False
+    EVENT_PARAMS = [
+        u'timestamp',
+        u'iso',
+        u'year',
+        u'month',
+        u'day',
+        u'hour',
+        u'minute',
+        u'weekday',
+        u'weekday_literal',
+        u'sunset',
+        u'sunrise'
+    ]
 
     def __init__(self, bus, formatters_broker, events_broker):
         """ 
@@ -21,29 +34,4 @@ class ParametersTimeNowEvent(Event):
             events_broker (EventsBroker): events broker instance
         """
         Event.__init__(self, bus, formatters_broker, events_broker)
-
-    def _check_params(self, params):
-        """
-        Check event parameters
-
-        Args:
-            params (dict): event parameters
-
-        Return:
-            bool: True if params are valid, False otherwise
-        """
-        keys = [
-            u'timestamp',
-            u'iso',
-            u'year',
-            u'month',
-            u'day',
-            u'hour',
-            u'minute',
-            u'weekday',
-            u'weekday_literal',
-            u'sunset',
-            u'sunrise'
-        ]
-        return all(key in keys for key in params.keys())
 
