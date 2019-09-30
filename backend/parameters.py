@@ -31,7 +31,7 @@ class Parameters(RaspIotModule):
         python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = u'Cleep'
-    MODULE_VERSION = u'1.0.2'
+    MODULE_VERSION = u'1.1.0'
     MODULE_CATEGORY = u'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []
@@ -40,9 +40,9 @@ class Parameters(RaspIotModule):
     MODULE_CORE = True
     MODULE_TAGS = [u'configuration', u'date', u'time', u'locale', u'lang']
     MODULE_COUNTRY = None
-    MODULE_URLINFO = None
+    MODULE_URLINFO = u'https://github.com/tangb/cleepmod-parameters'
     MODULE_URLHELP = None
-    MODULE_URLBUGS = None
+    MODULE_URLBUGS = u'https://github.com/tangb/cleepmod-parameters/issues'
     MODULE_URLSITE = None
 
     MODULE_CONFIG_FILE = u'parameters.conf'
