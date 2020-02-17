@@ -37,7 +37,6 @@ class Parameters(RaspIotModule):
     MODULE_DEPS = []
     MODULE_DESCRIPTION = u'Configure generic parameters of your device'
     MODULE_LONGDESCRIPTION = u'Application that helps you to configure generic parameters of your device'
-    MODULE_CORE = True
     MODULE_TAGS = [u'configuration', u'date', u'time', u'locale', u'lang']
     MODULE_COUNTRY = None
     MODULE_URLINFO = u'https://github.com/tangb/cleepmod-parameters'
