@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from raspiot.libs.internals.formatter import Formatter
-from raspiot.profiles.soundTextToSpeechProfile import SoundTextToSpeechProfile
+from raspiot.libs.internals.profileformatter import ProfileFormatter
+from raspiot.profiles.soundtexttospeechprofile import SoundTextToSpeechProfile
 
-class SunsetToTextToSpeechFormatter(Formatter):
+class SunsetToTextToSpeechFormatter(ProfileFormatter):
     """
     Sunset data to TextToSpeechProfile
     """
@@ -15,7 +15,7 @@ class SunsetToTextToSpeechFormatter(Formatter):
         Args:
             events_broker (EventsBroker): events broker instance
         """
-        Formatter.__init__(self, events_broker, u'parameters.time.sunset', SoundTextToSpeechProfile())
+        ProfileFormatter.__init__(self, events_broker, u'parameters.time.sunset', SoundTextToSpeechProfile())
 
     def _fill_profile(self, event_values, profile):
         """

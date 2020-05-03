@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from raspiot.libs.internals.formatter import Formatter
-from raspiot.profiles.displayAddOrReplaceMessageProfile import DisplayAddOrReplaceMessageProfile
+from raspiot.libs.internals.profileformatter import ProfileFormatter
+from raspiot.profiles.displayaddorreplacemessageprofile import DisplayAddOrReplaceMessageProfile
 
-class TimeToDisplayAddOrReplaceMessageFormatter(Formatter):
+class TimeToDisplayAddOrReplaceMessageFormatter(ProfileFormatter):
     """
     Time data to DisplayAddOrReplaceProfile
     """
@@ -15,7 +15,7 @@ class TimeToDisplayAddOrReplaceMessageFormatter(Formatter):
         Args:
             events_broker (EventsBroker): events broker instance
         """
-        Formatter.__init__(self, events_broker, u'parameters.time.now', DisplayAddOrReplaceMessageProfile())
+        ProfileFormatter.__init__(self, events_broker, u'parameters.time.now', DisplayAddOrReplaceMessageProfile())
 
     def _fill_profile(self, event_values, profile):
         """
