@@ -2,7 +2,7 @@
  * Parameters config directive
  * Handle parameters configuration
  */
-var parametersConfigDirective = function(toast, parametersService, raspiotService, $timeout) {
+var parametersConfigDirective = function(toast, parametersService, cleepService, $timeout) {
 
     var parametersController = ['$scope', function($scope)
     {
@@ -33,7 +33,7 @@ var parametersConfigDirective = function(toast, parametersService, raspiotServic
         {
             parametersService.setHostname(self.hostname)
                 .then(function(resp) {
-                    return raspiotService.reloadModuleConfig('parameters');
+                    return cleepService.reloadModuleConfig('parameters');
                 })
                 .then(function(config) {
                     self.updateConfig(config);
@@ -47,19 +47,19 @@ var parametersConfigDirective = function(toast, parametersService, raspiotServic
         self.setPosition = function()
         {
             //check values
-            if( !$scope.raspiotposition || !$scope.raspiotposition.lat || !$scope.raspiotposition.lng ) {
+            if( !$scope.cleepposition || !$scope.cleepposition.lat || !$scope.cleepposition.lng ) {
                 toast.info('Please select position before setting position');
                 return;
             }
-            if( $scope.raspiotposition.lat==self.position.latitude && $scope.raspiotposition.lng==self.position.longitude ) {
+            if( $scope.cleepposition.lat==self.position.latitude && $scope.cleepposition.lng==self.position.longitude ) {
                 toast.info('Position not changed');
                 return;
             }
 
             toast.loading('Setting localisation...');
-            parametersService.setPosition($scope.raspiotposition.lat, $scope.raspiotposition.lng)
+            parametersService.setPosition($scope.cleepposition.lat, $scope.cleepposition.lng)
                 .then(function(resp) {
-                    return raspiotService.reloadModuleConfig('parameters');
+                    return cleepService.reloadModuleConfig('parameters');
                 })
                 .then(function(config) {
                     self.updateConfig(config);
@@ -84,19 +84,19 @@ var parametersConfigDirective = function(toast, parametersService, raspiotServic
          */
         self.init = function()
         {
-            raspiotService.getModuleConfig('parameters')
+            cleepService.getModuleConfig('parameters')
                 .then(function(config) {
                     //update config
                     self.updateConfig(config);
 
                     //init leaflet
                     angular.extend($scope, {
-                        raspiotposition: {
+                        cleepposition: {
                             lat: self.position.latitude,
                             lng: self.position.longitude,
                             zoom: 8
                         },
-                        raspiotdefaults: {
+                        cleepdefaults: {
                             scrollWheelZoom: false,
                             minZoom: 5,
                             maxZoom: 12
@@ -120,7 +120,6 @@ var parametersConfigDirective = function(toast, parametersService, raspiotServic
     };
 };
 
-//var RaspIot = angular.module('RaspIot', ['nemLogging','ui-leaflet']);
-var RaspIot = angular.module('RaspIot');
-RaspIot.directive('parametersConfigDirective', ['toastService', 'parametersService', 'raspiotService', '$timeout', parametersConfigDirective]);
+var Cleep = angular.module('Cleep');
+Cleep.directive('parametersConfigDirective', ['toastService', 'parametersService', 'cleepService', '$timeout', parametersConfigDirective]);
 

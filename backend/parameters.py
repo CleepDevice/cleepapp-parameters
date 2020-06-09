@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-    
+
 import os
 import logging
 import time
 import copy
-from raspiot.raspiot import RaspIotModule
-from raspiot.utils import CommandError, InvalidParameter
-from raspiot.libs.configs.hostname import Hostname
-from raspiot.libs.internals.sun import Sun
-from raspiot.libs.internals.console import Console
-from raspiot.libs.internals.task import Task
+from cleep.core import CleepModule
+from cleep.exception import CommandError, InvalidParameter
+from cleep.libs.configs.hostname import Hostname
+from cleep.libs.internals.sun import Sun
+from cleep.libs.internals.console import Console
+from cleep.libs.internals.task import Task
 import reverse_geocode
 from timezonefinder import TimezoneFinder
 from pytz import timezone
@@ -20,15 +20,19 @@ import re
 
 __all__ = [u'Parameters']
 
-class Parameters(RaspIotModule):
+class Parameters(CleepModule):
     """
-    Allow to configure RaspIot parameters:
-      - system time(current time, sunset, sunrise) according to position
-      - system locale
+    Parameters application.
+
+    Allow to configure Cleep parameters:
+
+        * system time(current time, sunset, sunrise) according to position
+        * system locale
 
     Useful doc:
-        debian timezone: https://wiki.debian.org/TimeZoneChanges
-        python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
+
+        * debian timezone: https://wiki.debian.org/TimeZoneChanges
+        * python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = u'Cleep'
     MODULE_VERSION = u'1.1.0'
@@ -71,7 +75,7 @@ class Parameters(RaspIotModule):
             debug_enabled (bool): flag to set debug level to logger
         """
         #init
-        RaspIotModule.__init__(self, bootstrap, debug_enabled)
+        CleepModule.__init__(self, bootstrap, debug_enabled)
 
         #members
         self.hostname = Hostname(self.cleep_filesystem)
@@ -173,7 +177,7 @@ class Parameters(RaspIotModule):
                 })
                 devices[uuid].update(data)
 
-	return devices
+        return devices
 
     def __format_time(self, now=None):
         """
@@ -362,7 +366,7 @@ class Parameters(RaspIotModule):
         self.sunset = None
         self.sunrise = None
         if position[u'latitude']!=0 and position[u'longitude']!=0:
-            self.sun.setPosition(position[u'latitude'], position[u'longitude'], timezone)
+            self.sun.set_position(position[u'latitude'], position[u'longitude'])
             self.sunset = self.sun.sunset()
             self.sunrise = self.sun.sunrise()
             self.logger.debug('Found sunrise:%s sunset:%s' % (self.sunset, self.sunrise))
@@ -376,7 +380,9 @@ class Parameters(RaspIotModule):
     def set_country(self):
         """
         Compute country (and associated alpha) from current internal position
-        /!\ This function can take some time to find country info on slow device like raspi 1st generation (~15secs)
+
+        Warning:
+            This function can take some time to find country info on slow device like raspi 1st generation (~15secs)
         """
         #get position
         position = self._get_config_field(u'position')
@@ -418,7 +424,7 @@ class Parameters(RaspIotModule):
         return self._get_config_field(u'country')
 
     def set_timezone(self):
-	"""
+        """
         Set timezone according to coordinates
 
         Returns:

@@ -2,7 +2,7 @@
  * Parameters service
  * Handle parameters module requests
  */
-var parametersService = function($rootScope, rpcService, raspiotService) {
+var parametersService = function($rootScope, rpcService, cleepService) {
     var self = this;
     
     /**
@@ -30,13 +30,13 @@ var parametersService = function($rootScope, rpcService, raspiotService) {
      * Catch time event
      */
     $rootScope.$on('parameters.time.now', function(event, uuid, params) {
-        for( var i=0; i<raspiotService.devices.length; i++ )
+        for( var i=0; i<cleepService.devices.length; i++ )
         {
-            if( raspiotService.devices[i].uuid==uuid )
+            if( cleepService.devices[i].uuid==uuid )
             {
-                raspiotService.devices[i].timestamp = params.timestamp;
-                raspiotService.devices[i].sunset = params.sunset;
-                raspiotService.devices[i].sunrise = params.sunrise;
+                cleepService.devices[i].timestamp = params.timestamp;
+                cleepService.devices[i].sunset = params.sunset;
+                cleepService.devices[i].sunrise = params.sunrise;
                 break;
             }
         }
@@ -44,6 +44,6 @@ var parametersService = function($rootScope, rpcService, raspiotService) {
 
 };
     
-var RaspIot = angular.module('RaspIot');
-RaspIot.service('parametersService', ['$rootScope', 'rpcService', 'raspiotService', parametersService]);
+var Cleep = angular.module('Cleep');
+Cleep.service('parametersService', ['$rootScope', 'rpcService', 'cleepService', parametersService]);
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from raspiot.libs.internals.profileformatter import ProfileFormatter
-from raspiot.profiles.displayaddorreplacemessageprofile import DisplayAddOrReplaceMessageProfile
+from cleep.libs.internals.profileformatter import ProfileFormatter
+from cleep.profiles.displayaddorreplacemessageprofile import DisplayAddOrReplaceMessageProfile
 
 class TimeToDisplayAddOrReplaceMessageFormatter(ProfileFormatter):
     """

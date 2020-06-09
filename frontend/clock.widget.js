@@ -21,6 +21,6 @@ var widgetClockDirective = function(parametersService) {
     };
 };
 
-var RaspIot = angular.module('RaspIot');
-RaspIot.directive('widgetClockDirective', ['parametersService', widgetClockDirective]);
+var Cleep = angular.module('Cleep');
+Cleep.directive('widgetClockDirective', ['parametersService', widgetClockDirective]);
 
