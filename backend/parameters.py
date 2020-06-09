@@ -2,21 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import os
-import logging
 import time
 import copy
+import re
+from datetime import datetime
+import reverse_geocode
+from timezonefinder import TimezoneFinder
+from pytz import timezone
+from tzlocal import get_localzone
 from cleep.core import CleepModule
 from cleep.exception import CommandError, InvalidParameter
 from cleep.libs.configs.hostname import Hostname
 from cleep.libs.internals.sun import Sun
 from cleep.libs.internals.console import Console
 from cleep.libs.internals.task import Task
-import reverse_geocode
-from timezonefinder import TimezoneFinder
-from pytz import timezone
-from tzlocal import get_localzone
-from datetime import datetime
-import re
 
 __all__ = [u'Parameters']
 
@@ -107,7 +106,7 @@ class Parameters(CleepModule):
         Configure module
         """
         #add clock device if not already added
-        if self._get_device_count()<1:
+        if self._get_device_count() < 1:
             self.logger.debug(u'Add default devices')
             clock = {
                 u'type': u'clock',
@@ -135,7 +134,7 @@ class Parameters(CleepModule):
         #get_module_devices need to have timezone configured !
         devices = self.get_module_devices()
         for uuid in devices:
-            if devices[uuid][u'type']==u'clock':
+            if devices[uuid][u'type'] == u'clock':
                 self.__clock_uuid = uuid
 
         #launch time task
@@ -167,9 +166,9 @@ class Parameters(CleepModule):
             dict: module devices
         """
         devices = super(Parameters, self).get_module_devices()
-        
+
         for uuid in devices:
-            if devices[uuid][u'type']==u'clock':
+            if devices[uuid][u'type'] == u'clock':
                 data = self.__format_time()
                 data.update({
                     u'sunrise': self.suns[u'sunrise'],
@@ -205,32 +204,32 @@ class Parameters(CleepModule):
         #current time
         if not now:
             now = int(time.time())
-        dt = datetime.fromtimestamp(now)
-        dt = self.timezone.localize(dt)
-        weekday = dt.weekday()
-        if weekday==0:
+        current_dt = datetime.fromtimestamp(now)
+        current_dt = self.timezone.localize(current_dt)
+        weekday = current_dt.weekday()
+        if weekday == 0:
             weekday_literal = u'monday'
-        elif weekday==1:
+        elif weekday == 1:
             weekday_literal = u'tuesday'
-        elif weekday==2:
+        elif weekday == 2:
             weekday_literal = u'wednesday'
-        elif weekday==3:
+        elif weekday == 3:
             weekday_literal = u'thursday'
-        elif weekday==4:
+        elif weekday == 4:
             weekday_literal = u'friday'
-        elif weekday==5:
+        elif weekday == 5:
             weekday_literal = u'saturday'
-        elif weekday==6:
+        elif weekday == 6:
             weekday_literal = u'sunday'
 
         return {
             u'timestamp': now,
-            u'iso': dt.isoformat(),
-            u'year': dt.year,
-            u'month': dt.month,
-            u'day': dt.day,
-            u'hour': dt.hour,
-            u'minute': dt.minute,
+            u'iso': current_dt.isoformat(),
+            u'year': current_dt.year,
+            u'month': current_dt.month,
+            u'day': current_dt.day,
+            u'hour': current_dt.hour,
+            u'minute': current_dt.minute,
             u'weekday': weekday,
             u'weekday_literal': weekday_literal
         }
@@ -239,7 +238,6 @@ class Parameters(CleepModule):
         """
         Time task used to refresh time
         """
-        now = int(time.time())
         now_formatted = self.__format_time()
 
         #send now event
@@ -252,16 +250,16 @@ class Parameters(CleepModule):
 
         #send sunrise event
         if self.sunrise:
-            if now_formatted[u'hour']==self.sunrise.hour and now_formatted[u'minute']==self.sunrise.minute:
+            if now_formatted[u'hour'] == self.sunrise.hour and now_formatted[u'minute'] == self.sunrise.minute:
                 self.parameters_time_sunrise.send(device_id=self.__clock_uuid)
 
         #send sunset event
         if self.sunset:
-            if now_formatted[u'hour']==self.sunset.hour and now_formatted[u'minute']==self.sunset.minute:
+            if now_formatted[u'hour'] == self.sunset.hour and now_formatted[u'minute'] == self.sunset.minute:
                 self.parameters_time_sunset.send(device_id=self.__clock_uuid)
 
         #update sun times after midnight
-        if now_formatted[u'hour']==0 and now_formatted[u'minute']==5:
+        if now_formatted[u'hour'] == 0 and now_formatted[u'minute'] == 5:
             self.set_sun()
 
     def set_hostname(self, hostname):
@@ -302,7 +300,7 @@ class Parameters(CleepModule):
     def set_position(self, latitude, longitude):
         """
         Set device position
-        
+
         Args:
             latitude (float): latitude
             longitude (float): longitude
@@ -360,12 +358,11 @@ class Parameters(CleepModule):
         """
         #get position
         position = self._get_config_field(u'position')
-        timezone = self._get_config_field(u'timezone')
 
         #compute sun times
         self.sunset = None
         self.sunrise = None
-        if position[u'latitude']!=0 and position[u'longitude']!=0:
+        if position[u'latitude'] != 0 and position[u'longitude'] != 0:
             self.sun.set_position(position[u'latitude'], position[u'longitude'])
             self.sunset = self.sun.sunset()
             self.sunrise = self.sun.sunrise()
@@ -392,13 +389,13 @@ class Parameters(CleepModule):
             u'country': None,
             u'alpha2': None
         }
-        if position[u'latitude']!=0 and position[u'longitude']!=0:
+        if position[u'latitude'] != 0 and position[u'longitude'] != 0:
             try:
                 #search country
-                coordinates = (position[u'latitude'], position[u'longitude']),
+                coordinates = (position[u'latitude'], position[u'longitude'])
                 geo = reverse_geocode.search(coordinates)
                 self.logger.debug('Found country infos from position %s: %s' % (position, geo))
-                if geo and len(geo)>0 and u'country_code' in geo[0] and u'country' in geo[0]:
+                if geo and len(geo) > 0 and u'country_code' in geo[0] and u'country' in geo[0]:
                     country[u'alpha2'] = geo[0][u'country_code']
                     country[u'country'] = geo[0][u'country']
 
@@ -406,9 +403,9 @@ class Parameters(CleepModule):
                 self._set_config_field(u'country', country)
 
                 #send event
-                self.parameters_country_update.send(params=country);
+                self.parameters_country_update.send(params=country)
 
-            except:
+            except Exception:
                 self.logger.exception(u'Unable to find country for position %s:' % position)
 
         else:
@@ -437,12 +434,15 @@ class Parameters(CleepModule):
         position = self._get_config_field(u'position')
 
         #compute timezone
-        timezone = None
-        if position[u'latitude']!=0 and position[u'longitude']!=0:
+        current_timezone = None
+        if position[u'latitude'] != 0 and position[u'longitude'] != 0:
             try:
-                timezone = self.timezonefinder.timezone_at(lat=position[u'latitude'], lng=position[u'longitude'])
-                if timezone is None:
-                    timezone = self.timezonefinder.closest_timezone_at(lat=position[u'latitude'], lng=position[u'longitude'])
+                current_timezone = self.timezonefinder.timezone_at(lat=position[u'latitude'], lng=position[u'longitude'])
+                if current_timezone is None:
+                    current_timezone = self.timezonefinder.closest_timezone_at(
+                        lat=position[u'latitude'],
+                        lng=position[u'longitude']
+                    )
                     #TODO increase delta_degree to extend research, careful it use more CPU !
 
             except ValueError:
@@ -450,21 +450,23 @@ class Parameters(CleepModule):
                 self.logger.exception(u'Coordinates out of bounds')
 
         #save timezone value
-        self.logger.debug('Save new timezone: %s' % timezone)
-        if not self._set_config_field(u'timezone', timezone):
+        self.logger.debug('Save new timezone: %s' % current_timezone)
+        if not self._set_config_field(u'timezone', current_timezone):
             raise CommandError(u'Unable to save timezone')
 
         #configure system timezone
-        if timezone:
-            zoneinfo = os.path.join(self.SYSTEM_ZONEINFO_DIR, timezone)
+        if current_timezone:
+            zoneinfo = os.path.join(self.SYSTEM_ZONEINFO_DIR, current_timezone)
             self.logger.debug(u'Checking zoneinfo file: %s' % zoneinfo)
             if os.path.exists(zoneinfo):
                 self.logger.debug(u'zoneinfo file "%s" exists' % zoneinfo)
                 self.cleep_filesystem.rm(self.SYSTEM_LOCALTIME)
 
-                self.logger.debug(u'Writing timezone "%s" in "%s"' % (timezone, self.SYSTEM_TIMEZONE))
-                if not self.cleep_filesystem.write_data(self.SYSTEM_TIMEZONE, u'%s' % timezone):
-                    self.logger.error(u'Unable to write timezone data on "%s". System timezone is not configured!' % self.SYSTEM_TIMEZONE)
+                self.logger.debug(u'Writing timezone "%s" in "%s"' % (current_timezone, self.SYSTEM_TIMEZONE))
+                if not self.cleep_filesystem.write_data(self.SYSTEM_TIMEZONE, u'%s' % current_timezone):
+                    self.logger.error(
+                        u'Unable to write timezone data on "%s". System timezone is not configured!' % self.SYSTEM_TIMEZONE
+                    )
                     return False
 
                 #launch timezone update in background
@@ -473,7 +475,7 @@ class Parameters(CleepModule):
                 res = command.command(u'/usr/sbin/dpkg-reconfigure -f noninteractive tzdata', timeout=15.0)
                 self.logger.debug('Timezone update command result: %s' % res)
                 # /!\ can't check command res because command output is printed on stderr :(
-                
+
             else:
                 self.logger.warning(u'Unable to set device timezone on non existing zoneinfo file: %s' % zoneinfo)
                 return False
