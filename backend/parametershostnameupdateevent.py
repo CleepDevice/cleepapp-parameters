@@ -13,7 +13,7 @@ class ParametersHostnameUpdateEvent(Event):
     EVENT_PARAMS = [u'hostname']
 
     def __init__(self, bus, formatters_broker):
-        """ 
+        """
         Constructor
 
         Args:

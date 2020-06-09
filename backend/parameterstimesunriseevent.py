@@ -13,7 +13,7 @@ class ParametersTimeSunriseEvent(Event):
     EVENT_PARAMS = []
 
     def __init__(self, bus, formatters_broker):
-        """ 
+        """
         Constructor
 
         Args:

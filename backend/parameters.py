@@ -48,7 +48,7 @@ class Parameters(CleepModule):
     MODULE_URLSITE = None
 
     MODULE_CONFIG_FILE = u'parameters.conf'
-    #default position to raspberry pi foundation
+    # default position to raspberry pi foundation
     DEFAULT_CONFIG = {
         u'position': {
             u'latitude': 52.2040,
@@ -73,10 +73,10 @@ class Parameters(CleepModule):
             bootstrap (dict): bootstrap objects
             debug_enabled (bool): flag to set debug level to logger
         """
-        #init
+        # init
         CleepModule.__init__(self, bootstrap, debug_enabled)
 
-        #members
+        # members
         self.hostname = Hostname(self.cleep_filesystem)
         self.sun = Sun()
         self.sunset = None
@@ -94,7 +94,7 @@ class Parameters(CleepModule):
         self.__clock_uuid = None
         self.__hostname_pattern = r'^[a-zA-Z][0-9a-zA-Z\-]{3,}[^-]$'
 
-        #events
+        # events
         self.parameters_time_now = self._get_event(u'parameters.time.now')
         self.parameters_time_sunrise = self._get_event(u'parameters.time.sunrise')
         self.parameters_time_sunset = self._get_event(u'parameters.time.sunset')
@@ -105,7 +105,7 @@ class Parameters(CleepModule):
         """
         Configure module
         """
-        #add clock device if not already added
+        # add clock device if not already added
         if self._get_device_count() < 1:
             self.logger.debug(u'Add default devices')
             clock = {
@@ -114,12 +114,12 @@ class Parameters(CleepModule):
             }
             self._add_device(clock)
 
-        #prepare country
+        # prepare country
         country = self._get_config_field(u'country')
         if not country:
             self.set_country()
 
-        #prepare timezone
+        # prepare timezone
         timezone_name = self._get_config_field(u'timezone')
         if timezone_name:
             self.timezone = timezone(timezone_name)
@@ -127,17 +127,17 @@ class Parameters(CleepModule):
             self.logger.info(u'No timezone defined, use default one. It will be updated when user set its position.')
             self.timezone = get_localzone()
 
-        #compute sun times
+        # compute sun times
         self.set_sun()
 
-        #store device uuids for events
-        #get_module_devices need to have timezone configured !
+        # store device uuids for events
+        # get_module_devices need to have timezone configured !
         devices = self.get_module_devices()
         for uuid in devices:
             if devices[uuid][u'type'] == u'clock':
                 self.__clock_uuid = uuid
 
-        #launch time task
+        # launch time task
         self.time_task = Task(60.0, self.__time_task, self.logger)
         self.time_task.start()
 
@@ -201,7 +201,7 @@ class Parameters(CleepModule):
                 }
 
         """
-        #current time
+        # current time
         if not now:
             now = int(time.time())
         current_dt = datetime.fromtimestamp(now)
@@ -240,7 +240,7 @@ class Parameters(CleepModule):
         """
         now_formatted = self.__format_time()
 
-        #send now event
+        # send now event
         now_event_params = copy.deepcopy(now_formatted)
         now_event_params.update({
             u'sunrise': self.suns[u'sunrise'],
@@ -248,17 +248,17 @@ class Parameters(CleepModule):
         })
         self.parameters_time_now.send(params=now_event_params, device_id=self.__clock_uuid)
 
-        #send sunrise event
+        # send sunrise event
         if self.sunrise:
             if now_formatted[u'hour'] == self.sunrise.hour and now_formatted[u'minute'] == self.sunrise.minute:
                 self.parameters_time_sunrise.send(device_id=self.__clock_uuid)
 
-        #send sunset event
+        # send sunset event
         if self.sunset:
             if now_formatted[u'hour'] == self.sunset.hour and now_formatted[u'minute'] == self.sunset.minute:
                 self.parameters_time_sunset.send(device_id=self.__clock_uuid)
 
-        #update sun times after midnight
+        # update sun times after midnight
         if now_formatted[u'hour'] == 0 and now_formatted[u'minute'] == 5:
             self.set_sun()
 
@@ -275,14 +275,14 @@ class Parameters(CleepModule):
         Raises:
             InvalidParameter: if hostname has invalid format
         """
-        #check hostname
+        # check hostname
         if re.match(self.__hostname_pattern, hostname) is None:
             raise InvalidParameter(u'Hostname is not valid')
 
-        #update hostname
+        # update hostname
         res = self.hostname.set_hostname(hostname)
 
-        #send event to update hostname on all devices
+        # send event to update hostname on all devices
         if res:
             self.parameters_hostname_update.send(params={u'hostname': hostname})
 
@@ -308,7 +308,7 @@ class Parameters(CleepModule):
         Raises:
             CommandError: if error occured during position saving
         """
-        #save new position
+        # save new position
         position = {
             u'latitude': latitude,
             u'longitude': longitude
@@ -317,7 +317,7 @@ class Parameters(CleepModule):
         if not self._set_config_field(u'position', position):
             raise CommandError(u'Unable to save position')
 
-        #and position related stuff
+        # and position related stuff
         self.set_timezone()
         self.set_country()
         self.set_sun()
@@ -356,10 +356,10 @@ class Parameters(CleepModule):
         """"
         Compute sun times (sunrise and sunset) according to configured position
         """
-        #get position
+        # get position
         position = self._get_config_field(u'position')
 
-        #compute sun times
+        # compute sun times
         self.sunset = None
         self.sunrise = None
         if position[u'latitude'] != 0 and position[u'longitude'] != 0:
@@ -368,7 +368,7 @@ class Parameters(CleepModule):
             self.sunrise = self.sun.sunrise()
             self.logger.debug('Found sunrise:%s sunset:%s' % (self.sunset, self.sunrise))
 
-            #save times
+            # save times
             self.suns[u'sunrise'] = int(self.sunrise.strftime('%s'))
             self.suns[u'sunrise_iso'] = self.sunrise.isoformat()
             self.suns[u'sunset'] = int(self.sunset.strftime('%s'))
@@ -381,17 +381,17 @@ class Parameters(CleepModule):
         Warning:
             This function can take some time to find country info on slow device like raspi 1st generation (~15secs)
         """
-        #get position
+        # get position
         position = self._get_config_field(u'position')
 
-        #get country from position
+        # get country from position
         country = {
             u'country': None,
             u'alpha2': None
         }
         if position[u'latitude'] != 0 and position[u'longitude'] != 0:
             try:
-                #search country
+                # search country
                 coordinates = (position[u'latitude'], position[u'longitude'])
                 geo = reverse_geocode.search(coordinates)
                 self.logger.debug('Found country infos from position %s: %s' % (position, geo))
@@ -399,10 +399,10 @@ class Parameters(CleepModule):
                     country[u'alpha2'] = geo[0][u'country_code']
                     country[u'country'] = geo[0][u'country']
 
-                #save new country
+                # save new country
                 self._set_config_field(u'country', country)
 
-                #send event
+                # send event
                 self.parameters_country_update.send(params=country)
 
             except Exception:
@@ -430,10 +430,10 @@ class Parameters(CleepModule):
         Raises:
             CommandError: if unable to save timezone
         """
-        #get position
+        # get position
         position = self._get_config_field(u'position')
 
-        #compute timezone
+        # compute timezone
         current_timezone = None
         if position[u'latitude'] != 0 and position[u'longitude'] != 0:
             try:
@@ -443,18 +443,18 @@ class Parameters(CleepModule):
                         lat=position[u'latitude'],
                         lng=position[u'longitude']
                     )
-                    #TODO increase delta_degree to extend research, careful it use more CPU !
+                    # TODO increase delta_degree to extend research, careful it use more CPU !
 
             except ValueError:
-                #the coordinates were out of bounds
+                # the coordinates were out of bounds
                 self.logger.exception(u'Coordinates out of bounds')
 
-        #save timezone value
+        # save timezone value
         self.logger.debug('Save new timezone: %s' % current_timezone)
         if not self._set_config_field(u'timezone', current_timezone):
             raise CommandError(u'Unable to save timezone')
 
-        #configure system timezone
+        # configure system timezone
         if current_timezone:
             zoneinfo = os.path.join(self.SYSTEM_ZONEINFO_DIR, current_timezone)
             self.logger.debug(u'Checking zoneinfo file: %s' % zoneinfo)
@@ -469,7 +469,7 @@ class Parameters(CleepModule):
                     )
                     return False
 
-                #launch timezone update in background
+                # launch timezone update in background
                 self.logger.debug(u'Updating system timezone')
                 command = Console()
                 res = command.command(u'/usr/sbin/dpkg-reconfigure -f noninteractive tzdata', timeout=15.0)

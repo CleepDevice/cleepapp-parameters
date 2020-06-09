@@ -17,12 +17,12 @@ class SunriseToTextToSpeechFormatter(ProfileFormatter):
         """
         ProfileFormatter.__init__(self, events_broker, u'parameters.time.sunrise', SoundTextToSpeechProfile())
 
-    def _fill_profile(self, event_values, profile):
+    def _fill_profile(self, event_params, profile):
         """
         Fill profile with event data
 
         Args:
-            event_values (dict): event values
+            event_params (dict): event parameters
             profile (Profile): profile instance
         """
         profile.text = u'It\'s sunrise!'

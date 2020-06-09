@@ -13,7 +13,7 @@ class ParametersCountryUpdateEvent(Event):
     EVENT_PARAMS = [u'country', u'alpha2']
 
     def __init__(self, bus, formatters_broker):
-        """ 
+        """
         Constructor
 
         Args:
