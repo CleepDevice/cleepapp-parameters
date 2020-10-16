@@ -11,7 +11,7 @@ from timezonefinder import TimezoneFinder
 from pytz import timezone
 from tzlocal import get_localzone
 from cleep.core import CleepModule
-from cleep.exception import CommandError, InvalidParameter
+from cleep.exception import CommandError, InvalidParameter, MissingParameter
 from cleep.libs.configs.hostname import Hostname
 from cleep.libs.internals.sun import Sun
 from cleep.libs.internals.console import Console
@@ -96,11 +96,11 @@ class Parameters(CleepModule):
         self.__hostname_pattern = r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
 
         # events
-        self.parameters_time_now = self._get_event(u'parameters.time.now')
-        self.parameters_time_sunrise = self._get_event(u'parameters.time.sunrise')
-        self.parameters_time_sunset = self._get_event(u'parameters.time.sunset')
-        self.parameters_hostname_update = self._get_event(u'parameters.hostname.update')
-        self.parameters_country_update = self._get_event(u'parameters.country.update')
+        self.time_now_event = self._get_event(u'parameters.time.now')
+        self.time_sunrise_event = self._get_event(u'parameters.time.sunrise')
+        self.time_sunset_event = self._get_event(u'parameters.time.sunset')
+        self.hostname_update_event = self._get_event(u'parameters.hostname.update')
+        self.country_update_event = self._get_event(u'parameters.country.update')
 
     def _configure(self):
         """
@@ -132,15 +132,25 @@ class Parameters(CleepModule):
         self.set_sun()
 
         # store device uuids for events
-        # get_module_devices need to have timezone configured !
         devices = self.get_module_devices()
         for uuid in devices:
             if devices[uuid][u'type'] == u'clock':
                 self.__clock_uuid = uuid
 
+    def _on_start(self):
+        """
+        Module starts
+        """
         # launch time task
         self.time_task = Task(60.0, self._time_task, self.logger)
         self.time_task.start()
+
+    def _on_stop(self):
+        """
+        Module stops
+        """
+        if self.time_task:
+            self.time_task.stop()
 
     def get_module_config(self):
         """
@@ -247,17 +257,17 @@ class Parameters(CleepModule):
             u'sunrise': self.suns[u'sunrise'],
             u'sunset': self.suns[u'sunset']
         })
-        self.parameters_time_now.send(params=now_event_params, device_id=self.__clock_uuid)
+        self.time_now_event.send(params=now_event_params, device_id=self.__clock_uuid)
 
         # send sunrise event
         if self.sunrise:
             if now_formatted[u'hour'] == self.sunrise.hour and now_formatted[u'minute'] == self.sunrise.minute:
-                self.parameters_time_sunrise.send(device_id=self.__clock_uuid)
+                self.time_sunrise_event.send(device_id=self.__clock_uuid)
 
         # send sunset event
         if self.sunset:
             if now_formatted[u'hour'] == self.sunset.hour and now_formatted[u'minute'] == self.sunset.minute:
-                self.parameters_time_sunset.send(device_id=self.__clock_uuid)
+                self.time_sunset_event.send(device_id=self.__clock_uuid)
 
         # update sun times after midnight
         if now_formatted[u'hour'] == 0 and now_formatted[u'minute'] == 5:
@@ -285,7 +295,7 @@ class Parameters(CleepModule):
 
         # send event to update hostname on all devices
         if res:
-            self.parameters_hostname_update.send(params={u'hostname': hostname})
+            self.hostname_update_event.send(params={u'hostname': hostname})
 
         return res
 
@@ -309,6 +319,15 @@ class Parameters(CleepModule):
         Raises:
             CommandError: if error occured during position saving
         """
+        if latitude is None:
+            raise MissingParameter('Parameter "latitude" is missing')
+        if not isinstance(latitude, float):
+            raise InvalidParameter('Parameter "latitude" is invalid')
+        if longitude is None:
+            raise MissingParameter('Parameter "longitude" is missing')
+        if not isinstance(longitude, float):
+            raise InvalidParameter('Parameter "longitude" is invalid')
+
         # save new position
         position = {
             u'latitude': latitude,
@@ -408,7 +427,10 @@ class Parameters(CleepModule):
                 raise CommandError(u'Unable to save country')
 
             # send event
-            self.parameters_country_update.send(params=country)
+            self.country_update_event.send(params=country)
+
+        except CommandError:
+            raise
 
         except Exception:
             self.logger.exception(u'Unable to find country for position %s:' % position)

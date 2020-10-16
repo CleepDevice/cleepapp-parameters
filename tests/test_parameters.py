@@ -23,7 +23,7 @@ class TestParameters(unittest.TestCase):
 
     def init_session(self, mock_sun=None,
         mock_hostname=None, set_hostname_return_value=True, get_hostname_return_value='dummy',
-        mock_tzfinder=None, tzfinder_timezoneat_side_effect=None, tzfinder_timezoneat_return_value=None):
+        mock_tzfinder=None, tzfinder_timezoneat_side_effect=None, tzfinder_timezoneat_return_value=None, start=True):
         if mock_sun:
             local_tz = pytz.timezone('Europe/London')
             mock_sun.return_value.sunset.return_value = local_tz.localize(datetime.fromtimestamp(1591735300))
@@ -41,13 +41,25 @@ class TestParameters(unittest.TestCase):
 
         self.module = self.session.setup(Parameters)
 
-        self.module.parameters_time_now = MagicMock()
-        self.module.parameters_time_sunrise = MagicMock()
-        self.module.parameters_time_sunset = MagicMock()
-        self.module.parameters_hostname_update = MagicMock()
-        self.module.parameters_country_update = MagicMock()
+        if start:
+            self.session.start_module(self.module)
+
+    def test_configure(self):
+        self.init_session(start=False)
+        self.module._add_device = Mock()
+        self.module._get_device_count = Mock(return_value=0)
+        self.module._get_config_field = Mock(return_value=None)
+        self.module.set_country = Mock()
+        self.module.set_sun = Mock()
 
         self.session.start_module(self.module)
+
+        self.module._add_device.assert_called_with({
+            'type': 'clock',
+            'name': 'Clock'
+        })
+        self.module.set_country.assert_called()
+        self.module.set_sun.assert_called()
 
     @patch('backend.parameters.Sun')
     def test_get_module_config_default(self, mock_sun):
@@ -140,10 +152,7 @@ class TestParameters(unittest.TestCase):
         self.init_session()
 
         self.module._time_task()
-        self.assertTrue(self.module.parameters_time_now.send.called)
-        kwargs = self.module.parameters_time_now.send.call_args.kwargs
-        logging.debug('kwargs: %s' % kwargs)
-        self.assertEqual(kwargs['params'], {
+        self.assertTrue(self.session.event_called_with('parameters.time.now', {
             'hour': 21,
             'day': 8,
             'month': 6,
@@ -152,10 +161,10 @@ class TestParameters(unittest.TestCase):
             'weekday': 0,
             'iso': '2020-06-08T21:50:08+01:00',
             'year': 2020,
-            'sunset': kwargs['params']['sunset'],
-            'sunrise': kwargs['params']['sunrise'],
+            'sunset': self.module.suns['sunset'],
+            'sunrise': self.module.suns['sunrise'],
             'minute': 50
-        })
+        }))
 
     @patch('time.time')
     def test_time_task_sunrise_event(self, mock_time):
@@ -165,7 +174,7 @@ class TestParameters(unittest.TestCase):
         self.module.sunrise = datetime.fromtimestamp(ts)
 
         self.module._time_task()
-        self.assertTrue(self.module.parameters_time_sunrise.send.called)
+        self.assertTrue(self.session.event_called('parameters.time.sunrise'))
 
     @patch('time.time')
     def test_time_task_sunset_event(self, mock_time):
@@ -175,7 +184,7 @@ class TestParameters(unittest.TestCase):
         self.module.sunset = datetime.fromtimestamp(ts)
 
         self.module._time_task()
-        self.assertTrue(self.module.parameters_time_sunset.send.called)
+        self.assertTrue(self.session.event_called('parameters.time.sunset'))
 
     @patch('time.time')
     def test_time_task_update_sun_after_midnight(self, mock_time):
@@ -192,19 +201,16 @@ class TestParameters(unittest.TestCase):
         self.init_session(mock_hostname=mock_hostname)
         
         self.assertTrue(self.module.set_hostname('dummy'))
-        self.assertTrue(self.module.parameters_hostname_update.send.called)
-        kwargs = self.module.parameters_hostname_update.send.call_args.kwargs
-        logging.debug('kwargs: %s' % kwargs)
-        self.assertEqual(kwargs['params'], {
+        self.assertTrue(self.session.event_called_with('parameters.hostname.update', {
             'hostname': 'dummy'
-        })
+        }))
 
     @patch('backend.parameters.Hostname')
     def test_set_hostname_failed(self, mock_hostname):
         self.init_session(mock_hostname=mock_hostname, set_hostname_return_value=False)
         
         self.assertFalse(self.module.set_hostname('dummy'))
-        self.assertFalse(self.module.parameters_hostname_update.send.called)
+        self.assertFalse(self.session.event_called('parameters.hostname.update'))
 
     def test_set_hostname_invalid_name(self):
         self.init_session()
@@ -245,6 +251,30 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(position['latitude'], 48.8591554)
         self.assertEqual(position['longitude'], 2.2907284)
 
+    def test_set_position_exception(self):
+        self.init_session()
+
+        with self.assertRaises(MissingParameter) as cm:
+            self.module.set_position(None, 2.2907284)
+        self.assertEqual(str(cm.exception), 'Parameter "latitude" is missing')
+
+        with self.assertRaises(InvalidParameter) as cm:
+            self.module.set_position(48, 2.2907284)
+        self.assertEqual(str(cm.exception), 'Parameter "latitude" is invalid')
+
+        with self.assertRaises(MissingParameter) as cm:
+            self.module.set_position(48.8591554, None)
+        self.assertEqual(str(cm.exception), 'Parameter "longitude" is missing')
+
+        with self.assertRaises(InvalidParameter) as cm:
+            self.module.set_position(48.8591554, 2)
+        self.assertEqual(str(cm.exception), 'Parameter "longitude" is invalid')
+
+        self.module._set_config_field = Mock(return_value=False)
+        with self.assertRaises(CommandError) as cm:
+            self.module.set_position(48.8591554, 2.2907284)
+        self.assertEqual(str(cm.exception), 'Unable to save position')
+
     def test_get_country(self):
         self.init_session()
         country = self.module.get_country()
@@ -265,21 +295,33 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(country['alpha2'], 'FR')
         self.assertEqual(country['country'], 'France')
 
-        self.assertTrue(self.module.parameters_country_update.send.called)
-        kwargs = self.module.parameters_country_update.send.call_args.kwargs
-        logging.debug('kwargs: %s' % kwargs)
-        self.assertEqual(kwargs['params'], {
+        self.assertTrue(self.session.event_called_with('parameters.country.update', {
             'alpha2': 'FR',
             'country': 'France',
-        })
+        }))
 
     @patch('backend.parameters.reverse_geocode')
-    def test_set_country_exception(self, mock_reverse_geo):
+    def test_set_country_geocode_exception(self, mock_reverse_geo):
         mock_reverse_geo.search.side_effect = Exception('Test exception')
         self.init_session()
 
-        # should not failed
         self.module.set_country()
+
+        self.assertFalse(self.session.event_called('parameters.country.update'))
+
+    def test_set_country_commanderror(self):
+        self.init_session()
+        original_set_country = self.module.set_country
+        self.module.set_timezone = MagicMock()
+        self.module.set_country = MagicMock()
+        self.module.set_sun = MagicMock()
+        self.module.set_position(48.8591554, 2.2907284)
+        self.module.set_country = original_set_country
+        self.module._set_config_field = Mock(return_value=False)
+
+        with self.assertRaises(CommandError) as cm:
+            self.module.set_country()
+        self.assertEqual(str(cm.exception), 'Unable to save country')
 
     def test_set_country_no_position(self):
         self.init_session()
@@ -352,6 +394,18 @@ class TestParameters(unittest.TestCase):
         mock_console.return_value.command.return_value = {'returncode': 1, 'stderr': 'Test error'}
         self.assertFalse(self.module.set_timezone())
 
+    @patch('backend.parameters.TimezoneFinder')
+    def test_set_timezone_timezonefinder_extend_timezone_search(self, mock_tzfinder):
+        mock_tzfinder.return_value.closest_timezone_at = Mock(return_value='Europe/Paris')
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value=None)
+        self.module._get_config_field = Mock(return_value={
+            'latitude': 52.204,
+            'longitude': 0.1208,
+        })
+
+        self.assertTrue(self.module.set_timezone())
+        mock_tzfinder.return_value.closest_timezone_at.assert_called_with(lat=52.204, lng=0.1208)
+        
 
 #do not remove code below, otherwise test won't run
 if __name__ == '__main__':
