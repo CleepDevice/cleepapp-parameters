@@ -3,14 +3,26 @@
 
 from cleep.libs.internals.event import Event
 
-class ParametersHostnameUpdateEvent(Event):
+class ParametersTimeNowEvent(Event):
     """
-    Parameters.hostname.update event
+    Parameters.time.now event
     """
 
-    EVENT_NAME = u'parameters.hostname.update'
-    EVENT_SYSTEM = False
-    EVENT_PARAMS = [u'hostname']
+    EVENT_NAME = 'parameters.time.now'
+    EVENT_PROPAGATE = False
+    EVENT_PARAMS = [
+        'timestamp',
+        'iso',
+        'year',
+        'month',
+        'day',
+        'hour',
+        'minute',
+        'weekday',
+        'weekday_literal',
+        'sunset',
+        'sunrise'
+    ]
 
     def __init__(self, bus, formatters_broker):
         """

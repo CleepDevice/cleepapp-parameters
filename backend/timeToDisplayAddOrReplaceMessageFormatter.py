@@ -15,7 +15,7 @@ class TimeToDisplayAddOrReplaceMessageFormatter(ProfileFormatter):
         Args:
             events_broker (EventsBroker): events broker instance
         """
-        ProfileFormatter.__init__(self, events_broker, u'parameters.time.now', DisplayAddOrReplaceMessageProfile())
+        ProfileFormatter.__init__(self, events_broker, 'parameters.time.now', DisplayAddOrReplaceMessageProfile())
 
     def _fill_profile(self, event_params, profile):
         """
@@ -25,15 +25,15 @@ class TimeToDisplayAddOrReplaceMessageFormatter(ProfileFormatter):
             event_params (dict): event parameters
             profile (Profile): profile instance
         """
-        profile.uuid = u'currenttime'
+        profile.uuid = 'currenttime'
 
         # append current time
-        profile.message = u':clock: %02d:%02d %02d/%02d/%d' % (
-            event_params[u'hour'],
-            event_params[u'minute'],
-            event_params[u'day'],
-            event_params[u'month'],
-            event_params[u'year']
+        profile.message = ':clock: %02d:%02d %02d/%02d/%d' % (
+            event_params['hour'],
+            event_params['minute'],
+            event_params['day'],
+            event_params['month'],
+            event_params['year']
         )
 
         return profile

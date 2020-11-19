@@ -3,14 +3,14 @@
 
 from cleep.libs.internals.event import Event
 
-class ParametersTimeSunriseEvent(Event):
+class ParametersCountryUpdateEvent(Event):
     """
-    Parameters.time.sunrise event
+    Parameters.country.update event
     """
 
-    EVENT_NAME = u'parameters.time.sunrise'
-    EVENT_SYSTEM = False
-    EVENT_PARAMS = []
+    EVENT_NAME = 'parameters.country.update'
+    EVENT_PROPAGATE = False
+    EVENT_PARAMS = ['country', 'alpha2']
 
     def __init__(self, bus, formatters_broker):
         """

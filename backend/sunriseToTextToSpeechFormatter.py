@@ -15,7 +15,7 @@ class SunriseToTextToSpeechFormatter(ProfileFormatter):
         Args:
             events_broker (EventsBroker): events broker instance
         """
-        ProfileFormatter.__init__(self, events_broker, u'parameters.time.sunrise', SoundTextToSpeechProfile())
+        ProfileFormatter.__init__(self, events_broker, 'parameters.time.sunrise', SoundTextToSpeechProfile())
 
     def _fill_profile(self, event_params, profile):
         """
@@ -25,7 +25,7 @@ class SunriseToTextToSpeechFormatter(ProfileFormatter):
             event_params (dict): event parameters
             profile (Profile): profile instance
         """
-        profile.text = u'It\'s sunrise!'
+        profile.text = 'It\'s sunrise!'
 
         return profile
 
