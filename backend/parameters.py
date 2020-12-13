@@ -35,7 +35,7 @@ class Parameters(CleepModule):
         * python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = 'Cleep'
-    MODULE_VERSION = '1.1.0'
+    MODULE_VERSION = '2.0.0'
     MODULE_CATEGORY = 'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []
@@ -66,7 +66,7 @@ class Parameters(CleepModule):
     SYSTEM_ZONEINFO_DIR = '/usr/share/zoneinfo/'
     SYSTEM_LOCALTIME = '/etc/localtime'
     SYSTEM_TIMEZONE = '/etc/timezone'
-    NTP_SYNC_INTERVAL = 300
+    NTP_SYNC_INTERVAL = 60
 
     def __init__(self, bootstrap, debug_enabled):
         """
@@ -149,6 +149,10 @@ class Parameters(CleepModule):
         saved_timestamp = self._get_config_field('timestamp')
         if (int(time.time()) - saved_timestamp) < 0:
             # it seems NTP sync failed, launch timer to regularly try to sync device time
+            self.logger.info(
+                'Device time seems to be invalid (%s), launch synchronization time task',
+                datetime.now().strftime("%Y-%m-%d %H:%M")
+            )
             self.sync_time_task = Task(Parameters.NTP_SYNC_INTERVAL, self._sync_time_task, self.logger)
             self.sync_time_task.start()
 
@@ -266,8 +270,9 @@ class Parameters(CleepModule):
             This task is launched only if device time is insane.
         """
         if self.sync_time():
-            self.logger.info('Time synchronized with NTP server')
+            self.logger.info('Time synchronized with NTP server (%s)' % datetime.now().strftime("%Y-%m-%d %H:%M"))
             self.sync_time_task.stop()
+            self.sync_time_task = None
 
     def _time_task(self):
         """
@@ -298,7 +303,8 @@ class Parameters(CleepModule):
             self.set_sun()
 
         # save last timestamp in config to restore it after a reboot and NTP sync failed (no internet)
-        self._set_config_field('timestamp', now_formatted['timestamp'])
+        if not self.sync_time_task:
+            self._set_config_field('timestamp', now_formatted['timestamp'])
 
     def set_hostname(self, hostname):
         """
@@ -559,5 +565,7 @@ class Parameters(CleepModule):
             bool: True if NTP sync succeed, False otherwise
         """
         console = Console()
-        console.command('/usr/sbin/ntpdate-debian', timeout=60.0)
+        resp = console.command('/usr/sbin/ntpdate-debian', timeout=60.0)
+
+        return resp['returncode'] == 0
 
