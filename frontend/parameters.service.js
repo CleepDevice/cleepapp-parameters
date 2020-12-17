@@ -37,6 +37,8 @@ function($rootScope, rpcService, cleepService) {
         {
             if( cleepService.devices[i].uuid==uuid )
             {
+                cleepService.devices[i].hour = params.hour;
+                cleepService.devices[i].minute = params.minute;
                 cleepService.devices[i].timestamp = params.timestamp;
                 cleepService.devices[i].sunset = params.sunset;
                 cleepService.devices[i].sunrise = params.sunrise;

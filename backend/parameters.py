@@ -370,10 +370,17 @@ class Parameters(CleepModule):
         if not self._set_config_field('position', position):
             raise CommandError('Unable to save position')
 
+        # reset python time to take into account last modifications before
+        # computing new times
+        time.tzset()
+
         # and update related stuff
         self.set_timezone()
         self.set_country()
         self.set_sun()
+
+        # send now event
+        self._time_task()
 
     def get_position(self):
         """
