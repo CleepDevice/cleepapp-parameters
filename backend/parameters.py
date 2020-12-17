@@ -35,7 +35,7 @@ class Parameters(CleepModule):
         * python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = 'Cleep'
-    MODULE_VERSION = '2.0.0'
+    MODULE_VERSION = '2.0.1'
     MODULE_CATEGORY = 'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []
