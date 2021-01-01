@@ -1,5 +1,5 @@
 {
-    "icon": "settings",
+    "icon": "tune-vertical",
     "global": {
         "js": ["clock.widget.js", "parameters.service.js"],
         "html": ["clock.widget.html"]
