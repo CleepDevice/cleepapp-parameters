@@ -480,7 +480,13 @@ class Parameters(CleepModule):
         Get country from position
 
         Returns:
-            string: return country name (english)
+            dict: return country infos::
+
+            {
+                country (string): country label
+                alpha2 (string): country code
+            }
+
         """
         return self._get_config_field('country')
 
