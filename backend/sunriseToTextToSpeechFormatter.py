@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from cleep.libs.internals.profileformatter import ProfileFormatter
-from cleep.profiles.soundtexttospeechprofile import SoundTextToSpeechProfile
+from cleep.profiles.soundTextToSpeechProfile import SoundTextToSpeechProfile
 
 class SunriseToTextToSpeechFormatter(ProfileFormatter):
     """
