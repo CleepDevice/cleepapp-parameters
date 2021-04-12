@@ -8,14 +8,14 @@ class SunsetToTextToSpeechFormatter(ProfileFormatter):
     """
     Sunset data to TextToSpeechProfile
     """
-    def __init__(self, events_broker):
+    def __init__(self, params):
         """
         Constructor
 
         Args:
-            events_broker (EventsBroker): events broker instance
+            params (dict): formatter parameters
         """
-        ProfileFormatter.__init__(self, events_broker, 'parameters.time.sunset', SoundTextToSpeechProfile())
+        ProfileFormatter.__init__(self, params, 'parameters.time.sunset', SoundTextToSpeechProfile())
 
     def _fill_profile(self, event_params, profile):
         """

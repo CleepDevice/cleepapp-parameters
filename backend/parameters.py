@@ -97,7 +97,8 @@ class Parameters(CleepModule):
         self.sync_time_task = None
         self.__clock_uuid = None
         # code from https://stackoverflow.com/a/106223
-        self.__hostname_pattern = r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
+        self.__hostname_pattern = (r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*'
+                r'([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$')
 
         # events
         self.time_now_event = self._get_event('parameters.time.now')
@@ -193,7 +194,7 @@ class Parameters(CleepModule):
         Returns:
             dict: module devices
         """
-        devices = super(Parameters, self).get_module_devices()
+        devices = super().get_module_devices()
 
         for uuid in devices:
             if devices[uuid]['type'] == 'clock':
@@ -269,7 +270,7 @@ class Parameters(CleepModule):
         Note:
             This task is launched only if device time is insane.
         """
-        if self.sync_time():
+        if Parameters.sync_time():
             self.logger.info('Time synchronized with NTP server (%s)' % datetime.now().strftime("%Y-%m-%d %H:%M"))
             self.sync_time_task.stop()
             self.sync_time_task = None
@@ -567,7 +568,8 @@ class Parameters(CleepModule):
         """
         return self._get_config_field('timezone')
 
-    def sync_time(self):
+    @staticmethod
+    def sync_time():
         """
         Synchronize device time using NTP server
 

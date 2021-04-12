@@ -5,6 +5,17 @@ import logging
 import sys
 sys.path.append('../')
 from backend.parameters import Parameters
+from backend.parameterscountryupdateevent import ParametersCountryUpdateEvent
+from backend.parametershostnameupdateevent import ParametersHostnameUpdateEvent
+from backend.parameterstimenowevent import ParametersTimeNowEvent
+from backend.parameterstimesunriseevent import ParametersTimeSunriseEvent
+from backend.parameterstimesunsetevent import ParametersTimeSunsetEvent
+from backend.sunrisetotexttospeechformatter import SunriseToTextToSpeechFormatter
+from backend.sunsettotexttospeechformatter import SunsetToTextToSpeechFormatter
+from backend.timetodisplaymessageformatter import TimeToDisplayMessageFormatter
+from backend.timetodisplaysinglemessageformatter import TimeToDisplaySingleMessageFormatter
+from backend.timetotexttospeechformatter import TimeToTextToSpeechFormatter
+from backend.timetodisplaymessageformatter import TimeToDisplayMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
 from mock import patch, MagicMock, Mock, ANY
@@ -189,14 +200,15 @@ class TestsParameters(unittest.TestCase):
         self.assertEqual(devices[uid]['weekday'], 6)
         self.assertEqual(devices[uid]['weekday_literal'], 'sunday')
 
-    def test_sync_time_task_sync_ok(self):
+    @patch('backend.parameters.Parameters.sync_time')
+    def test_sync_time_task_sync_ok(self, sync_time_mock):
         self.init_session()
-        self.module.sync_time = Mock(return_value=True)
+        sync_time_mock.return_value = True
         self.module.sync_time_task = Mock()
 
         self.module._sync_time_task()
         
-        self.assertTrue(self.module.sync_time_task.stop.called)
+        self.assertIsNone(self.module.sync_time_task)
 
     def test_sync_time_task_sync_ko(self):
         self.init_session()
@@ -478,7 +490,219 @@ class TestsParameters(unittest.TestCase):
 
         mock_console.return_value.command.assert_called_with('/usr/sbin/ntpdate-debian', timeout=60.0)
 
+
+
+class TestsParametersCountryUpdateEvent(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        params = { 
+            'internal_bus': Mock(),
+            'formatters_broker': Mock(),
+            'get_external_bus_name': None,
+        }   
+        self.event = ParametersCountryUpdateEvent(params)
+
+    def test_event_params(self):
+        self.assertEqual(self.event.EVENT_PARAMS, ['country', 'alpha2'])
+
+
+
+class TestsParametersHostnameUpdateEvent(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        params = { 
+            'internal_bus': Mock(),
+            'formatters_broker': Mock(),
+            'get_external_bus_name': None,
+        }   
+        self.event = ParametersHostnameUpdateEvent(params)
+
+    def test_event_params(self):
+        self.assertEqual(self.event.EVENT_PARAMS, ['hostname'])
+
+
+
+class TestsParametersTimeNowEvent(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        params = { 
+            'internal_bus': Mock(),
+            'formatters_broker': Mock(),
+            'get_external_bus_name': None,
+        }   
+        self.event = ParametersTimeNowEvent(params)
+
+    def test_event_params(self):
+        self.assertEqual(self.event.EVENT_PARAMS, ['timestamp', 'iso', 'year', 'month', 'day', 'hour', 'minute', 'weekday', 'weekday_literal', 'sunset', 'sunrise'])
+
+
+
+class TestsParametersTimeSunriseEvent(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        params = { 
+            'internal_bus': Mock(),
+            'formatters_broker': Mock(),
+            'get_external_bus_name': None,
+        }   
+        self.event = ParametersTimeSunriseEvent(params)
+
+    def test_event_params(self):
+        self.assertEqual(self.event.EVENT_PARAMS, [])
+
+
+
+class TestsParametersTimeSunsetEvent(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        params = { 
+            'internal_bus': Mock(),
+            'formatters_broker': Mock(),
+            'get_external_bus_name': None,
+        }   
+        self.event = ParametersTimeSunsetEvent(params)
+
+    def test_event_params(self):
+        self.assertEqual(self.event.EVENT_PARAMS, [])
+
+
+
+class TestsSunriseToTextToSpeechFormatter(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        events_broker = Mock()
+        self.formatter = SunriseToTextToSpeechFormatter({'events_broker': events_broker})
+
+    def test_fill_profile(self):
+        event_params = {}
+        profile = Mock()
+        profile = self.formatter._fill_profile(event_params, profile)
         
+        self.assertEqual(profile.text, 'It\'s sunrise!')
+
+
+
+class TestsSunsetToTextToSpeechFormatter(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        events_broker = Mock()
+        self.formatter = SunsetToTextToSpeechFormatter({'events_broker': events_broker})
+
+    def test_fill_profile(self):
+        event_params = {}
+        profile = Mock()
+        profile = self.formatter._fill_profile(event_params, profile)
+        
+        self.assertEqual(profile.text, 'It\'s sunset!')
+
+
+
+class TestsTimeToDisplayMessageFormatter(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        events_broker = Mock()
+        self.formatter = TimeToDisplayMessageFormatter({'events_broker': events_broker})
+
+    def test_fill_profile(self):
+        event_params = {
+            'timestamp': 1618220940,
+            'iso': '1970-01-19T18:30:20+01:00',
+            'year': 2021,
+            'month': 4,
+            'day': 12,
+            'hour': 9,
+            'minute': 49,
+            'weekday': 0,
+            'weekday_literal': 'monday',
+            'sunset': 1618259400,
+            'sunrise': 1618216200,
+        }
+        profile = Mock()
+        profile = self.formatter._fill_profile(event_params, profile)
+        
+        self.assertEqual(profile.message, '09:49 12/04/2021')
+
+
+
+class TestsTimeToDisplaySingleMessageFormatter(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        events_broker = Mock()
+        self.formatter = TimeToDisplaySingleMessageFormatter({'events_broker': events_broker})
+
+    def test_fill_profile(self):
+        event_params = {
+            'timestamp': 1618220940,
+            'iso': '1970-01-19T18:30:20+01:00',
+            'year': 2021,
+            'month': 4,
+            'day': 12,
+            'hour': 9,
+            'minute': 49,
+            'weekday': 0,
+            'weekday_literal': 'monday',
+            'sunset': 1618259400,
+            'sunrise': 1618216200,
+        }
+        profile = Mock()
+        profile = self.formatter._fill_profile(event_params, profile)
+        
+        self.assertEqual(profile.uuid, 'currenttime')
+        self.assertEqual(profile.message, '09:49 12/04/2021')
+
+
+
+class TestsTimeToTextToSpeechFormatter(unittest.TestCase):
+
+    def setUp(self):
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        events_broker = Mock()
+        self.formatter = TimeToTextToSpeechFormatter({'events_broker': events_broker})
+
+    def test_fill_profile(self):
+        profile = Mock()
+
+        event_params = {'hour': 0, 'minute': 0}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s midnight')
+
+        event_params = {'hour': 12, 'minute': 0}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s noon')
+
+        event_params = {'hour': 14, 'minute': 0}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s 14 o\'clock')
+
+        event_params = {'hour': 14, 'minute': 15}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s quarter past 14')
+
+        event_params = {'hour': 14, 'minute': 45}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s quarter to 15')
+
+        event_params = {'hour': 14, 'minute': 30}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s half past 14')
+
+        event_params = {'hour': 14, 'minute': 21}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s 21 past 14')
+
+        event_params = {'hour': 14, 'minute': 39}
+        profile = self.formatter._fill_profile(event_params, profile)
+        self.assertEqual(profile.text, 'It\'s 21 to 15')
+
 
 # do not remove code below, otherwise test won't run
 if __name__ == '__main__':

@@ -8,14 +8,14 @@ class TimeToDisplaySingleMessageFormatter(ProfileFormatter):
     """
     Time data to DisplaySingleMessageProfile
     """
-    def __init__(self, events_broker):
+    def __init__(self, params):
         """
         Constuctor
 
         Args:
-            events_broker (EventsBroker): events broker instance
+            params (dict): formatter parameters
         """
-        ProfileFormatter.__init__(self, events_broker, 'parameters.time.now', DisplaySingleMessageProfile())
+        ProfileFormatter.__init__(self, params, 'parameters.time.now', DisplaySingleMessageProfile())
 
     def _fill_profile(self, event_params, profile):
         """

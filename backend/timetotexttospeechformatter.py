@@ -8,14 +8,14 @@ class TimeToTextToSpeechFormatter(ProfileFormatter):
     """
     Current time data to TextToSpeechProfile
     """
-    def __init__(self, events_broker):
+    def __init__(self, params):
         """
         Constructor
 
         Args:
-            events_broker (EventsBroker): events broker instance
+            params (dict): formatter parameters
         """
-        ProfileFormatter.__init__(self, events_broker, 'parameters.time.now', SoundTextToSpeechProfile())
+        ProfileFormatter.__init__(self, params, 'parameters.time.now', SoundTextToSpeechProfile())
 
     def _fill_profile(self, event_params, profile):
         """
@@ -30,7 +30,7 @@ class TimeToTextToSpeechFormatter(ProfileFormatter):
         """
         if event_params['hour'] == 0 and event_params['minute'] == 0:
             profile.text = 'It\'s midnight'
-        if event_params['hour'] == 12 and event_params['minute'] == 0:
+        elif event_params['hour'] == 12 and event_params['minute'] == 0:
             profile.text = 'It\'s noon'
         elif event_params['minute'] == 0:
             profile.text = 'It\'s %d o\'clock' % event_params['hour']
