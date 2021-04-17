@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.2 - 2021-04-17
+
+* Fix issue with timezone
+
 ## v2.0.1 - 2021-04-12
 
 * Improve code quality (lint)
