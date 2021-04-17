@@ -19,7 +19,8 @@ from backend.timetodisplaymessageformatter import TimeToDisplayMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
 from mock import patch, MagicMock, Mock, ANY
-from datetime import datetime
+from cleep.libs.tests.mockdatetime import mock_datetime
+import datetime
 import pytz
 import time
 
@@ -38,8 +39,8 @@ class TestsParameters(unittest.TestCase):
         mock_tzfinder=None, tzfinder_timezoneat_side_effect=None, tzfinder_timezoneat_return_value=None, start=True):
         if mock_sun:
             local_tz = pytz.timezone('Europe/London')
-            mock_sun.return_value.sunset.return_value = local_tz.localize(datetime.fromtimestamp(1591735300))
-            mock_sun.return_value.sunrise.return_value = local_tz.localize(datetime.fromtimestamp(1591735200))
+            mock_sun.return_value.sunset.return_value = local_tz.localize(datetime.datetime.fromtimestamp(1591735300))
+            mock_sun.return_value.sunrise.return_value = local_tz.localize(datetime.datetime.fromtimestamp(1591735200))
 
         if mock_hostname:
             mock_hostname.return_value.set_hostname.return_value = set_hostname_return_value
@@ -139,66 +140,76 @@ class TestsParameters(unittest.TestCase):
 
     @patch('time.time', MagicMock(return_value=1591818206))
     def test_get_module_devices(self):
-        self.init_session()
-        devices = self.module.get_module_devices()
-        logging.debug('Devices: %s' % devices)
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        with mock_datetime(utc_now, datetime):
+            self.init_session()
+            devices = self.module.get_module_devices()
+            logging.debug('Devices: %s' % devices)
 
-        self.assertEqual(len(devices), 1)
-        uid = list(devices.keys())[0]
-        self.assertEqual(devices[uid]['name'], 'Clock')
-        self.assertTrue('timestamp' in devices[uid])
-        self.assertEqual(devices[uid]['iso'], '2020-06-10T21:43:26+01:00')
-        self.assertEqual(devices[uid]['year'], 2020)
-        self.assertEqual(devices[uid]['month'], 6)
-        self.assertEqual(devices[uid]['day'], 10)
-        self.assertEqual(devices[uid]['hour'], 21)
-        self.assertEqual(devices[uid]['minute'], 43)
-        self.assertTrue('sunset' in devices[uid])
-        self.assertTrue('sunrise' in devices[uid])
-        self.assertEqual(devices[uid]['weekday'], 2)
-        self.assertEqual(devices[uid]['weekday_literal'], 'wednesday')
-        self.assertEqual(devices[uid]['type'], 'clock')
-        self.assertTrue('uuid' in devices[uid])
+            self.assertEqual(len(devices), 1)
+            uid = list(devices.keys())[0]
+            self.assertEqual(devices[uid]['name'], 'Clock')
+            self.assertTrue('timestamp' in devices[uid])
+            self.assertEqual(devices[uid]['iso'], '2020-06-08T20:50:08+01:00')
+            self.assertEqual(devices[uid]['year'], 2020)
+            self.assertEqual(devices[uid]['month'], 6)
+            self.assertEqual(devices[uid]['day'], 8)
+            self.assertEqual(devices[uid]['hour'], 20)
+            self.assertEqual(devices[uid]['minute'], 50)
+            self.assertTrue('sunset' in devices[uid])
+            self.assertTrue('sunrise' in devices[uid])
+            self.assertEqual(devices[uid]['weekday'], 0)
+            self.assertEqual(devices[uid]['weekday_literal'], 'monday')
+            self.assertEqual(devices[uid]['type'], 'clock')
+            self.assertTrue('uuid' in devices[uid])
 
     @patch('time.time')
     def test_get_module_devices_weekdays(self, mock_time):
-        mock_time.return_value = 1591645808
-        self.init_session()
-        devices = self.module.get_module_devices()
-        uid = list(devices.keys())[0]
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        uid = None
+        with mock_datetime(utc_now, datetime):
+            self.init_session()
+            devices = self.module.get_module_devices()
+            uid = list(devices.keys())[0]
 
-        self.assertEqual(devices[uid]['weekday'], 0)
-        self.assertEqual(devices[uid]['weekday_literal'], 'monday')
+            self.assertEqual(devices[uid]['weekday'], 0)
+            self.assertEqual(devices[uid]['weekday_literal'], 'monday')
 
-        mock_time.return_value = 1591732208
-        devices = self.module.get_module_devices()
-        self.assertEqual(devices[uid]['weekday'], 1)
-        self.assertEqual(devices[uid]['weekday_literal'], 'tuesday')
+        utc_now = datetime.datetime(2020, 6, 9, 19, 50, 8, 0) # 1591732208
+        with mock_datetime(utc_now, datetime):
+            devices = self.module.get_module_devices()
+            self.assertEqual(devices[uid]['weekday'], 1)
+            self.assertEqual(devices[uid]['weekday_literal'], 'tuesday')
 
-        mock_time.return_value = 1591818608
-        devices = self.module.get_module_devices()
-        self.assertEqual(devices[uid]['weekday'], 2)
-        self.assertEqual(devices[uid]['weekday_literal'], 'wednesday')
+        utc_now = datetime.datetime(2020, 6, 10, 19, 50, 8, 0) # 1591818608
+        with mock_datetime(utc_now, datetime):
+            devices = self.module.get_module_devices()
+            self.assertEqual(devices[uid]['weekday'], 2)
+            self.assertEqual(devices[uid]['weekday_literal'], 'wednesday')
 
-        mock_time.return_value = 1591905008
-        devices = self.module.get_module_devices()
-        self.assertEqual(devices[uid]['weekday'], 3)
-        self.assertEqual(devices[uid]['weekday_literal'], 'thursday')
+        utc_now = datetime.datetime(2020, 6, 11, 19, 50, 8, 0) # 1591905008
+        with mock_datetime(utc_now, datetime):
+            devices = self.module.get_module_devices()
+            self.assertEqual(devices[uid]['weekday'], 3)
+            self.assertEqual(devices[uid]['weekday_literal'], 'thursday')
 
-        mock_time.return_value = 1591991408
-        devices = self.module.get_module_devices()
-        self.assertEqual(devices[uid]['weekday'], 4)
-        self.assertEqual(devices[uid]['weekday_literal'], 'friday')
+        utc_now = datetime.datetime(2020, 6, 12, 19, 50, 8, 0) # 1591991408
+        with mock_datetime(utc_now, datetime):
+            devices = self.module.get_module_devices()
+            self.assertEqual(devices[uid]['weekday'], 4)
+            self.assertEqual(devices[uid]['weekday_literal'], 'friday')
 
-        mock_time.return_value = 1592077808
-        devices = self.module.get_module_devices()
-        self.assertEqual(devices[uid]['weekday'], 5)
-        self.assertEqual(devices[uid]['weekday_literal'], 'saturday')
+        utc_now = datetime.datetime(2020, 6, 13, 19, 50, 8, 0) # 1592077808
+        with mock_datetime(utc_now, datetime):
+            devices = self.module.get_module_devices()
+            self.assertEqual(devices[uid]['weekday'], 5)
+            self.assertEqual(devices[uid]['weekday_literal'], 'saturday')
 
-        mock_time.return_value = 1592164208
-        devices = self.module.get_module_devices()
-        self.assertEqual(devices[uid]['weekday'], 6)
-        self.assertEqual(devices[uid]['weekday_literal'], 'sunday')
+        utc_now = datetime.datetime(2020, 6, 14, 19, 50, 8, 0) # 1592164208
+        with mock_datetime(utc_now, datetime):
+            devices = self.module.get_module_devices()
+            self.assertEqual(devices[uid]['weekday'], 6)
+            self.assertEqual(devices[uid]['weekday_literal'], 'sunday')
 
     @patch('backend.parameters.Parameters.sync_time')
     def test_sync_time_task_sync_ok(self, sync_time_mock):
@@ -219,58 +230,57 @@ class TestsParameters(unittest.TestCase):
         
         self.assertFalse(self.module.sync_time_task.stop.called)
 
-    @patch('time.time')
-    def test_time_task_now_event(self, mock_time):
-        mock_time.return_value = 1591645808
-        self.init_session()
-        self.module._set_config_field = Mock()
+    def test_time_task_now_event(self):
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        with mock_datetime(utc_now, datetime):
+            self.init_session()
+            self.module.timezone = pytz.timezone('Europe/London')
+            self.module._set_config_field = Mock()
 
-        self.module._time_task()
+            self.module._time_task()
 
-        self.assertTrue(self.session.event_called_with('parameters.time.now', {
-            'hour': 21,
-            'day': 8,
-            'month': 6,
-            'weekday_literal': 'monday',
-            'timestamp': 1591645808,
-            'weekday': 0,
-            'iso': '2020-06-08T21:50:08+01:00',
-            'year': 2020,
-            'sunset': self.module.suns['sunset'],
-            'sunrise': self.module.suns['sunrise'],
-            'minute': 50
-        }))
-        self.module._set_config_field.assert_called_with('timestamp', 1591645808)
+            self.assertTrue(self.session.event_called_with('parameters.time.now', {
+                'hour': 20,
+                'day': 8,
+                'month': 6,
+                'weekday_literal': 'monday',
+                'timestamp': 1591645808,
+                'weekday': 0,
+                'iso': '2020-06-08T20:50:08+01:00',
+                'year': 2020,
+                'sunset': self.module.suns['sunset'],
+                'sunrise': self.module.suns['sunrise'],
+                'minute': 50
+            }))
+            self.module._set_config_field.assert_called_with('timestamp', 1591645808)
 
-    @patch('time.time')
-    def test_time_task_sunrise_event(self, mock_time):
-        ts = 1591645808
-        mock_time.return_value = ts
-        self.init_session()
-        self.module.sunrise = datetime.fromtimestamp(ts)
+    def test_time_task_sunrise_event(self):
+        utc_now = datetime.datetime(2020, 6, 8, 8, 15, 8, 0)
+        with mock_datetime(utc_now, datetime):
+            self.init_session()
+            self.module.sunrise = pytz.utc.localize(utc_now).astimezone(self.module.timezone)
 
-        self.module._time_task()
-        self.assertTrue(self.session.event_called('parameters.time.sunrise'))
+            self.module._time_task()
+            self.assertTrue(self.session.event_called('parameters.time.sunrise'))
 
-    @patch('time.time')
-    def test_time_task_sunset_event(self, mock_time):
-        ts = 1591645808
-        mock_time.return_value = ts
-        self.init_session()
-        self.module.sunset = datetime.fromtimestamp(ts)
+    def test_time_task_sunset_event(self):
+        utc_now = datetime.datetime(2020, 6, 8, 20, 5, 8, 0)
+        with mock_datetime(utc_now, datetime):
+            self.init_session()
+            self.module.sunset = pytz.utc.localize(utc_now).astimezone(self.module.timezone)
 
-        self.module._time_task()
-        self.assertTrue(self.session.event_called('parameters.time.sunset'))
+            self.module._time_task()
+            self.assertTrue(self.session.event_called('parameters.time.sunset'))
 
-    @patch('time.time')
-    def test_time_task_update_sun_after_midnight(self, mock_time):
-        ts = 1591653900 # 00:05
-        mock_time.return_value = ts
-        self.init_session()
-        self.module.set_sun = MagicMock()
+    def test_time_task_update_sun_after_midnight(self):
+        utc_now = datetime.datetime(2020, 6, 8, 23, 5, 8, 0)
+        with mock_datetime(utc_now, datetime):
+            self.init_session()
+            self.module.set_sun = MagicMock()
 
-        self.module._time_task()
-        self.assertTrue(self.module.set_sun.called)
+            self.module._time_task()
+
+            self.assertTrue(self.module.set_sun.called)
 
     @patch('cleep.libs.configs.hostname.Hostname')
     def test_set_hostname_succeed(self, mock_hostname):

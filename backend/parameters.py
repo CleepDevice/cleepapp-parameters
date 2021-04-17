@@ -5,11 +5,11 @@ import os
 import time
 import copy
 import re
-from datetime import datetime
+import datetime
 from threading import Timer
 import reverse_geocode
 from timezonefinder import TimezoneFinder
-from pytz import timezone
+from pytz import utc, timezone
 from tzlocal import get_localzone
 from cleep.core import CleepModule
 from cleep.exception import CommandError, InvalidParameter, MissingParameter
@@ -35,7 +35,7 @@ class Parameters(CleepModule):
         * python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = 'Cleep'
-    MODULE_VERSION = '2.0.1'
+    MODULE_VERSION = '2.0.2'
     MODULE_CATEGORY = 'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []
@@ -127,11 +127,7 @@ class Parameters(CleepModule):
 
         # prepare timezone
         timezone_name = self._get_config_field('timezone')
-        if timezone_name:
-            self.timezone = timezone(timezone_name)
-        else:
-            self.logger.info('No timezone defined, use default one. It will be updated when user sets its position.')
-            self.timezone = get_localzone().zone
+        self.timezone = timezone(timezone_name or get_localzone().zone)
 
         # compute sun times
         self.set_sun()
@@ -152,7 +148,7 @@ class Parameters(CleepModule):
             # it seems NTP sync failed, launch timer to regularly try to sync device time
             self.logger.info(
                 'Device time seems to be invalid (%s), launch synchronization time task',
-                datetime.now().strftime("%Y-%m-%d %H:%M")
+                datetime.datetime.utcnow().isoformat()
             )
             self.sync_time_task = Task(Parameters.NTP_SYNC_INTERVAL, self._sync_time_task, self.logger)
             self.sync_time_task.start()
@@ -207,12 +203,9 @@ class Parameters(CleepModule):
 
         return devices
 
-    def __format_time(self, now=None):
+    def __format_time(self):
         """
         Return time with different splitted infos
-
-        Args:
-            now (int): timestamp to use. If None current timestamp if used
 
         Returns:
             dict: time data::
@@ -231,11 +224,9 @@ class Parameters(CleepModule):
 
         """
         # current time
-        if not now:
-            now = int(time.time())
-        current_dt = datetime.fromtimestamp(now)
-        current_dt = self.timezone.localize(current_dt)
-        weekday = current_dt.weekday()
+        utc_now = utc.localize(datetime.datetime.utcnow())
+        local_now = utc_now.astimezone(self.timezone)
+        weekday = local_now.weekday()
         if weekday == 0:
             weekday_literal = 'monday'
         elif weekday == 1:
@@ -252,13 +243,13 @@ class Parameters(CleepModule):
             weekday_literal = 'sunday'
 
         return {
-            'timestamp': now,
-            'iso': current_dt.isoformat(),
-            'year': current_dt.year,
-            'month': current_dt.month,
-            'day': current_dt.day,
-            'hour': current_dt.hour,
-            'minute': current_dt.minute,
+            'timestamp': datetime.datetime.timestamp(utc_now),
+            'iso': local_now.isoformat(),
+            'year': local_now.year,
+            'month': local_now.month,
+            'day': local_now.day,
+            'hour': local_now.hour,
+            'minute': local_now.minute,
             'weekday': weekday,
             'weekday_literal': weekday_literal
         }
@@ -271,7 +262,7 @@ class Parameters(CleepModule):
             This task is launched only if device time is insane.
         """
         if Parameters.sync_time():
-            self.logger.info('Time synchronized with NTP server (%s)' % datetime.now().strftime("%Y-%m-%d %H:%M"))
+            self.logger.info('Time synchronized with NTP server (%s)' % datetime.datetime.utcnow().isoformat())
             self.sync_time_task.stop()
             self.sync_time_task = None
 
@@ -280,6 +271,7 @@ class Parameters(CleepModule):
         Time task used to refresh time
         """
         now_formatted = self.__format_time()
+        self.logger.trace('now_formatted: %s' % now_formatted)
 
         # send now event
         now_event_params = copy.deepcopy(now_formatted)
