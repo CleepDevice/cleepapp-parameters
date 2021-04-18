@@ -19,7 +19,7 @@ from backend.timetodisplaymessageformatter import TimeToDisplayMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
 from mock import patch, MagicMock, Mock, ANY
-from cleep.libs.tests.mockdatetime import mock_datetime
+# from cleep.libs.tests.mockdatetime import mock_datetime
 import datetime
 import pytz
 import time
@@ -138,6 +138,7 @@ class TestsParameters(unittest.TestCase):
         self.assertTrue('latitude' in conf['position'])
         self.assertTrue('longitude' in conf['position'])
 
+    @unittest.skip('Need cleep 0.0.24')
     @patch('time.time', MagicMock(return_value=1591818206))
     def test_get_module_devices(self):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
@@ -163,6 +164,7 @@ class TestsParameters(unittest.TestCase):
             self.assertEqual(devices[uid]['type'], 'clock')
             self.assertTrue('uuid' in devices[uid])
 
+    @unittest.skip('Need cleep 0.0.24')
     @patch('time.time')
     def test_get_module_devices_weekdays(self, mock_time):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
@@ -230,6 +232,7 @@ class TestsParameters(unittest.TestCase):
         
         self.assertFalse(self.module.sync_time_task.stop.called)
 
+    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_now_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
         with mock_datetime(utc_now, datetime):
@@ -254,6 +257,7 @@ class TestsParameters(unittest.TestCase):
             }))
             self.module._set_config_field.assert_called_with('timestamp', 1591645808)
 
+    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_sunrise_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 8, 15, 8, 0)
         with mock_datetime(utc_now, datetime):
@@ -263,6 +267,7 @@ class TestsParameters(unittest.TestCase):
             self.module._time_task()
             self.assertTrue(self.session.event_called('parameters.time.sunrise'))
 
+    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_sunset_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 20, 5, 8, 0)
         with mock_datetime(utc_now, datetime):
@@ -272,6 +277,7 @@ class TestsParameters(unittest.TestCase):
             self.module._time_task()
             self.assertTrue(self.session.event_called('parameters.time.sunset'))
 
+    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_update_sun_after_midnight(self):
         utc_now = datetime.datetime(2020, 6, 8, 23, 5, 8, 0)
         with mock_datetime(utc_now, datetime):
