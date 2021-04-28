@@ -417,8 +417,8 @@ class Parameters(CleepModule):
         self.sunrise = None
         if position['latitude'] != 0 and position['longitude'] != 0:
             self.sun.set_position(position['latitude'], position['longitude'])
-            self.sunset = self.sun.sunset()
-            self.sunrise = self.sun.sunrise()
+            self.sunset = self.sun.sunset().astimezone(self.timezone)
+            self.sunrise = self.sun.sunrise().astimezone(self.timezone)
             self.logger.debug('Found sunrise:%s sunset:%s' % (self.sunrise, self.sunset))
 
             # save times
@@ -548,6 +548,10 @@ class Parameters(CleepModule):
             return False
 
         # TODO configure all wpa_supplicant.conf country code
+
+        # propagate changes to cleep
+        self.timezone = timezone(current_timezone)
+        self._time_task()
 
         return True
 
