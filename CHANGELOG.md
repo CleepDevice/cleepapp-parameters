@@ -1,9 +1,13 @@
 # Changelog
 
-## v2.0.2 - 2021-04-17
+## v2.0.3 - 2021-04-28
 
 * Backend: fix issue updating localisation (times not timezoned)
 * Frontend: fix layout
+
+## v2.0.2 - 2021-04-17
+
+* Fix issue with timezone
 
 ## v2.0.1 - 2021-04-12
 
