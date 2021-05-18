@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.4 - 2021-05-18 UNRELEASED
+
+* Backend: update formatters after core changes
+
 ## v2.0.3 - 2021-04-28
 
 * Backend: fix issue updating localisation (times not timezoned)
