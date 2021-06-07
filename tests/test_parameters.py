@@ -10,16 +10,12 @@ from backend.parametershostnameupdateevent import ParametersHostnameUpdateEvent
 from backend.parameterstimenowevent import ParametersTimeNowEvent
 from backend.parameterstimesunriseevent import ParametersTimeSunriseEvent
 from backend.parameterstimesunsetevent import ParametersTimeSunsetEvent
-from backend.sunrisetotexttospeechformatter import SunriseToTextToSpeechFormatter
-from backend.sunsettotexttospeechformatter import SunsetToTextToSpeechFormatter
-from backend.timetodisplaymessageformatter import TimeToDisplayMessageFormatter
-from backend.timetodisplaysinglemessageformatter import TimeToDisplaySingleMessageFormatter
-from backend.timetotexttospeechformatter import TimeToTextToSpeechFormatter
-from backend.timetodisplaymessageformatter import TimeToDisplayMessageFormatter
+from backend.timetomessageformatter import TimeToMessageFormatter
+from backend.timetonamedmessageformatter import TimeToNamedMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
 from mock import patch, MagicMock, Mock, ANY
-# from cleep.libs.tests.mockdatetime import mock_datetime
+from cleep.libs.tests.mockdatetime import mock_datetime
 import datetime
 import pytz
 import time
@@ -138,7 +134,6 @@ class TestsParameters(unittest.TestCase):
         self.assertTrue('latitude' in conf['position'])
         self.assertTrue('longitude' in conf['position'])
 
-    @unittest.skip('Need cleep 0.0.24')
     @patch('time.time', MagicMock(return_value=1591818206))
     def test_get_module_devices(self):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
@@ -164,7 +159,6 @@ class TestsParameters(unittest.TestCase):
             self.assertEqual(devices[uid]['type'], 'clock')
             self.assertTrue('uuid' in devices[uid])
 
-    @unittest.skip('Need cleep 0.0.24')
     @patch('time.time')
     def test_get_module_devices_weekdays(self, mock_time):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
@@ -232,7 +226,6 @@ class TestsParameters(unittest.TestCase):
         
         self.assertFalse(self.module.sync_time_task.stop.called)
 
-    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_now_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
         with mock_datetime(utc_now, datetime):
@@ -257,7 +250,6 @@ class TestsParameters(unittest.TestCase):
             }))
             self.module._set_config_field.assert_called_with('timestamp', 1591645808)
 
-    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_sunrise_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 8, 15, 8, 0)
         with mock_datetime(utc_now, datetime):
@@ -267,7 +259,6 @@ class TestsParameters(unittest.TestCase):
             self.module._time_task()
             self.assertTrue(self.session.event_called('parameters.time.sunrise'))
 
-    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_sunset_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 20, 5, 8, 0)
         with mock_datetime(utc_now, datetime):
@@ -277,7 +268,6 @@ class TestsParameters(unittest.TestCase):
             self.module._time_task()
             self.assertTrue(self.session.event_called('parameters.time.sunset'))
 
-    @unittest.skip('Need cleep 0.0.24')
     def test_time_task_update_sun_after_midnight(self):
         utc_now = datetime.datetime(2020, 6, 8, 23, 5, 8, 0)
         with mock_datetime(utc_now, datetime):
@@ -572,6 +562,8 @@ class TestsParametersTimeSunriseEvent(unittest.TestCase):
 
 
 
+
+
 class TestsParametersTimeSunsetEvent(unittest.TestCase):
 
     def setUp(self):
@@ -588,44 +580,14 @@ class TestsParametersTimeSunsetEvent(unittest.TestCase):
 
 
 
-class TestsSunriseToTextToSpeechFormatter(unittest.TestCase):
+
+
+class TestsTimeToMessageFormatter(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         events_broker = Mock()
-        self.formatter = SunriseToTextToSpeechFormatter({'events_broker': events_broker})
-
-    def test_fill_profile(self):
-        event_params = {}
-        profile = Mock()
-        profile = self.formatter._fill_profile(event_params, profile)
-        
-        self.assertEqual(profile.text, 'It\'s sunrise!')
-
-
-
-class TestsSunsetToTextToSpeechFormatter(unittest.TestCase):
-
-    def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        events_broker = Mock()
-        self.formatter = SunsetToTextToSpeechFormatter({'events_broker': events_broker})
-
-    def test_fill_profile(self):
-        event_params = {}
-        profile = Mock()
-        profile = self.formatter._fill_profile(event_params, profile)
-        
-        self.assertEqual(profile.text, 'It\'s sunset!')
-
-
-
-class TestsTimeToDisplayMessageFormatter(unittest.TestCase):
-
-    def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        events_broker = Mock()
-        self.formatter = TimeToDisplayMessageFormatter({'events_broker': events_broker})
+        self.formatter = TimeToMessageFormatter({'events_broker': events_broker})
 
     def test_fill_profile(self):
         event_params = {
@@ -648,12 +610,12 @@ class TestsTimeToDisplayMessageFormatter(unittest.TestCase):
 
 
 
-class TestsTimeToDisplaySingleMessageFormatter(unittest.TestCase):
+class TestsTimeToNamedMessageFormatter(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         events_broker = Mock()
-        self.formatter = TimeToDisplaySingleMessageFormatter({'events_broker': events_broker})
+        self.formatter = TimeToNamedMessageFormatter({'events_broker': events_broker})
 
     def test_fill_profile(self):
         event_params = {
@@ -672,55 +634,11 @@ class TestsTimeToDisplaySingleMessageFormatter(unittest.TestCase):
         profile = Mock()
         profile = self.formatter._fill_profile(event_params, profile)
         
-        self.assertEqual(profile.uuid, 'currenttime')
+        self.assertEqual(profile.name, 'currenttime')
         self.assertEqual(profile.message, '09:49 12/04/2021')
 
 
 
-class TestsTimeToTextToSpeechFormatter(unittest.TestCase):
-
-    def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        events_broker = Mock()
-        self.formatter = TimeToTextToSpeechFormatter({'events_broker': events_broker})
-
-    def test_fill_profile(self):
-        profile = Mock()
-
-        event_params = {'hour': 0, 'minute': 0}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s midnight')
-
-        event_params = {'hour': 12, 'minute': 0}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s noon')
-
-        event_params = {'hour': 14, 'minute': 0}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s 14 o\'clock')
-
-        event_params = {'hour': 14, 'minute': 15}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s quarter past 14')
-
-        event_params = {'hour': 14, 'minute': 45}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s quarter to 15')
-
-        event_params = {'hour': 14, 'minute': 30}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s half past 14')
-
-        event_params = {'hour': 14, 'minute': 21}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s 21 past 14')
-
-        event_params = {'hour': 14, 'minute': 39}
-        profile = self.formatter._fill_profile(event_params, profile)
-        self.assertEqual(profile.text, 'It\'s 21 to 15')
-
-
-# do not remove code below, otherwise test won't run
 if __name__ == '__main__':
     # coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_parameters.py; coverage report -m -i
     unittest.main()

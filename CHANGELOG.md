@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.4 - 2021-05-18 UNRELEASED
+## v2.0.4 - 2021-06-07
 
 * Backend: update formatters after core changes
 
