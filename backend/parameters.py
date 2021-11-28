@@ -4,6 +4,7 @@
 import os
 import time
 import copy
+import importlib
 import re
 import datetime
 from threading import Timer
@@ -11,6 +12,7 @@ import reverse_geocode
 from timezonefinder import TimezoneFinder
 from pytz import utc, timezone
 from tzlocal import get_localzone
+from pycountry_convert import country_alpha2_to_continent_code, convert_continent_code_to_continent_name
 from cleep.core import CleepModule
 from cleep.exception import CommandError, InvalidParameter, MissingParameter
 from cleep.libs.configs.hostname import Hostname
@@ -35,7 +37,7 @@ class Parameters(CleepModule):
         * python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = 'Cleep'
-    MODULE_VERSION = '2.0.4'
+    MODULE_VERSION = '2.1.0'
     MODULE_CATEGORY = 'APPLICATION'
     MODULE_DEPS = []
     MODULE_DESCRIPTION = 'Configure generic parameters of your device'
@@ -578,4 +580,79 @@ class Parameters(CleepModule):
         resp = console.command('/usr/sbin/ntpdate-debian', timeout=60.0)
 
         return resp['returncode'] == 0
+
+    def get_non_working_days(self, year=None):
+        """
+        Return non working days of current year
+
+        Returns:
+            list: list of non working days of the year. List can be empty if error occured::
+
+            [
+                {
+                    datetime (string): non working day (date in iso format YYYY-MM-DD)
+                    label (string): english name of non working day
+                },
+                ...
+            ]
+
+        """
+        self._check_parameters([{
+            'name': 'year',
+            'type': int,
+            'value': year,
+            'none': True,
+        }])
+
+        try:
+            country = self._get_config_field('country')
+            continent_code = country_alpha2_to_continent_code(country['alpha2'])
+            continent_name = convert_continent_code_to_continent_name(continent_code).lower()
+            continent_name = continent_name.lower().replace('south', '').replace('north', '').strip()
+
+            workalendar = importlib.import_module(f'workalendar.{continent_name}')
+            fixed_country = ''.join([part.capitalize() for part in country['country'].split()])
+            _class = getattr(workalendar, fixed_country)
+            _instance = _class()
+            year = year or datetime.datetime.now().year
+            holidays = _instance.holidays(year)
+            return [
+                (date.isoformat(), label)
+                for (date, label) in holidays
+            ]
+        except Exception:
+            self.logger.exception('Unable to get non working days:')
+            return []
+
+    def is_non_working_day(self, day):
+        """
+        Check if specified day is non working day according to current locale configuration
+
+        Args:
+            day (string): day to check (must be iso format XXXX-MM-DD)
+
+        Returns:
+            bool: True if specified day is a non working day, False otherwise
+        """
+        self._check_parameters([{
+            'name': 'day',
+            'type': str,
+            'value': day,
+        }])
+
+        non_working_days = self.get_non_working_days()
+        return any(a_day == day for (a_day, label) in non_working_days)
+
+    def is_today_non_working_day(self):
+        """
+        Check if today is non working day according to current locale configuration
+
+        Args:
+            day (datetime.date): day to check
+
+        Returns:
+            bool: True if specified day is a non working day, False otherwise
+        """
+        today = datetime.date.today()
+        return self.is_non_working_day(today.isoformat())
 

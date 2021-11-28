@@ -27,7 +27,6 @@ class TestsParameters(unittest.TestCase):
         logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
 
     def tearDown(self):
-        # clean session
         self.session.clean()
 
     def init_session(self, mock_sun=None,
@@ -496,6 +495,52 @@ class TestsParameters(unittest.TestCase):
 
         mock_console.return_value.command.assert_called_with('/usr/sbin/ntpdate-debian', timeout=60.0)
 
+    def test_get_non_working_days(self):
+        self.init_session()
+
+        holidays = self.module.get_non_working_days(2021)
+        logging.debug('Holidays: %s', holidays)
+
+        self.assertListEqual(holidays, [
+            ('2021-01-01', 'New year'),
+            ('2021-04-02', 'Good Friday'),
+            ('2021-04-04', 'Easter Sunday'),
+            ('2021-04-05', 'Easter Monday'),
+            ('2021-05-03', 'Early May Bank Holiday'),
+            ('2021-05-31', 'Spring Bank Holiday'),
+            ('2021-08-30', 'Late Summer Bank Holiday'),
+            ('2021-12-25', 'Christmas Day'),
+            ('2021-12-26', 'Boxing Day'),
+            ('2021-12-27', 'Christmas Shift'),
+            ('2021-12-28', 'Boxing Day Shift')
+        ])
+
+    def test_get_non_working_day_unknown_country(self):
+        self.init_session()
+        self.module._get_config_field = Mock(return_value={"country": "country", "alpha2": "CO"})
+
+        holidays = self.module.get_non_working_days(2021)
+        logging.debug('Holidays: %s', holidays)
+
+        self.assertListEqual(holidays, [])
+
+    def test_is_non_working_day(self):
+        self.init_session()
+
+        self.assertTrue(self.module.is_non_working_day('2021-01-01'))
+        self.assertFalse(self.module.is_non_working_day('2021-01-02'))
+
+    def test_is_today_non_working_day(self):
+        self.init_session()
+
+        with patch('backend.parameters.datetime') as datetime_mock:
+            datetime_mock.date.today.return_value = datetime.date.fromisoformat('2021-01-01')
+            self.module.is_non_working_day = Mock()
+            self.assertTrue(self.module.is_today_non_working_day())
+            self.module.is_non_working_day.assert_called_with('2021-01-01')
+
+
+
 
 
 class TestsParametersCountryUpdateEvent(unittest.TestCase):
@@ -511,6 +556,8 @@ class TestsParametersCountryUpdateEvent(unittest.TestCase):
 
     def test_event_params(self):
         self.assertEqual(self.event.EVENT_PARAMS, ['country', 'alpha2'])
+
+
 
 
 
@@ -530,6 +577,8 @@ class TestsParametersHostnameUpdateEvent(unittest.TestCase):
 
 
 
+
+
 class TestsParametersTimeNowEvent(unittest.TestCase):
 
     def setUp(self):
@@ -543,6 +592,8 @@ class TestsParametersTimeNowEvent(unittest.TestCase):
 
     def test_event_params(self):
         self.assertEqual(self.event.EVENT_PARAMS, ['timestamp', 'iso', 'year', 'month', 'day', 'hour', 'minute', 'weekday', 'weekday_literal', 'sunset', 'sunrise'])
+
+
 
 
 
