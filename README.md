@@ -1,4 +1,4 @@
-# cleepmod-parameters [![Coverage Status](https://coveralls.io/repos/github/tangb/cleepmod-parameters/badge.svg?branch=master)](https://coveralls.io/github/tangb/cleepmod-parameters?branch=master)
+# cleepapp-parameters [![Coverage Status](https://coveralls.io/repos/github/tangb/cleepapp-parameters/badge.svg?branch=master)](https://coveralls.io/github/tangb/cleepapp-parameters?branch=master)
 
 Parameters application for Cleep
 
