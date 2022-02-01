@@ -24,7 +24,7 @@ class TestsParameters(unittest.TestCase):
 
     def setUp(self):
         self.session = session.TestSession(self)
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
 
     def tearDown(self):
         self.session.clean()
@@ -158,8 +158,7 @@ class TestsParameters(unittest.TestCase):
             self.assertEqual(devices[uid]['type'], 'clock')
             self.assertTrue('uuid' in devices[uid])
 
-    @patch('time.time')
-    def test_get_module_devices_weekdays(self, mock_time):
+    def test_get_module_devices_weekdays(self):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
         uid = None
         with mock_datetime(utc_now, datetime):

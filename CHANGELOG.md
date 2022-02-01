@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1] - 2022-02-01
+## Fixed
+- Fix bug detected after new year
+- Fix unit test issue with time lib mock
+- Format files with black
+
 ## [2.1.0] - 2021-11-28
 ### Added
 * Add commands to get and check non working days

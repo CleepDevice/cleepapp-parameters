@@ -37,7 +37,7 @@ class Parameters(CleepModule):
         * python datetime handling: https://hackernoon.com/avoid-a-bad-date-and-have-a-good-time-423792186f30
     """
     MODULE_AUTHOR = 'Cleep'
-    MODULE_VERSION = '2.1.0'
+    MODULE_VERSION = '2.1.1'
     MODULE_CATEGORY = 'APPLICATION'
     MODULE_DEPS = []
     MODULE_DESCRIPTION = 'Configure generic parameters of your device'
@@ -585,6 +585,9 @@ class Parameters(CleepModule):
         """
         Return non working days of current year
 
+        Args:
+            year (int): get non working day for specified year. If not specified use current year
+
         Returns:
             list: list of non working days of the year. List can be empty if error occured::
 
@@ -640,7 +643,8 @@ class Parameters(CleepModule):
             'value': day,
         }])
 
-        non_working_days = self.get_non_working_days()
+        year = datetime.date.fromisoformat(day).year
+        non_working_days = self.get_non_working_days(year=year)
         return any(a_day == day for (a_day, label) in non_working_days)
 
     def is_today_non_working_day(self):
