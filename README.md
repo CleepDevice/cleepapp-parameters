@@ -1,4 +1,4 @@
-# cleepapp-parameters [![Coverage Status](https://coveralls.io/repos/github/tangb/cleepapp-parameters/badge.svg?branch=master)](https://coveralls.io/github/tangb/cleepapp-parameters?branch=master)
+# Parameters [![Coverage Status](https://coveralls.io/repos/github/tangb/cleepapp-parameters/badge.svg?branch=master)](https://coveralls.io/github/tangb/cleepapp-parameters?branch=master) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/87825b92708b41beb38505a8d306418e)](https://www.codacy.com/gh/CleepDevice/cleepapp-parameters/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=CleepDevice/cleepapp-parameters&amp;utm_campaign=Badge_Grade)
 
 Parameters application for Cleep
 
