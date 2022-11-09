@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.0.0]
+### Changed
+- Clean code
+
 ## [2.1.1] - 2022-02-01
 ### Fixed
 - Fix bug detected after new year

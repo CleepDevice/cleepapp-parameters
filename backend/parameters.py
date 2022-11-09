@@ -566,14 +566,12 @@ class Parameters(CleepModule):
         self.logger.debug("Updating system timezone")
         command = Console()
         res = command.command(
-            "/usr/sbin/dpkg-reconfigure -f noninteractive tzdata", timeout=15.0
+            "dpkg-reconfigure -f noninteractive tzdata", timeout=60.0
         )
         self.logger.debug("Timezone update command result: %s" % res)
         if res["returncode"] != 0:
             self.logger.error("Error reconfiguring system timezone: %s" % res["stderr"])
             return False
-
-        # TODO configure all wpa_supplicant.conf country code
 
         # propagate changes to cleep
         self.timezone = timezone(current_timezone)
