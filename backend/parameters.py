@@ -152,6 +152,7 @@ class Parameters(CleepModule):
             self.sync_time_task.start()
 
         # launch time task (synced to current seconds)
+        self.time_task = Task(60.0, self._time_task, self.logger)
         seconds = 60 - (int(time.time()) % 60)
         if seconds == 60:
             self.time_task.start()
