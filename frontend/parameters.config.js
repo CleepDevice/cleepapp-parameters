@@ -84,7 +84,6 @@ function(toast, parametersService, cleepService, $timeout) {
         self.$onInit = function() {
             cleepService.getModuleConfig('parameters')
                 .then(function(config) {
-                    // update config
                     self.updateConfig(config);
 
                     // init leaflet

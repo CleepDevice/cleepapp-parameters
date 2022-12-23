@@ -153,9 +153,11 @@ class Parameters(CleepModule):
 
         # launch time task (synced to current seconds)
         seconds = 60 - (int(time.time()) % 60)
-        self.time_task = Task(60.0, self._time_task, self.logger)
-        timer = Timer(0 if seconds == 60 else seconds, self.time_task.start)
-        timer.start()
+        if seconds == 60:
+            self.time_task.start()
+        else:
+            timer = Timer(seconds, self.time_task.start)
+            timer.start()
 
     def _on_stop(self):
         """
@@ -303,6 +305,28 @@ class Parameters(CleepModule):
         # save last timestamp in config to restore it after a reboot and NTP sync failed (no internet)
         if not self.sync_time_task:
             self._set_config_field("timestamp", now_formatted["timestamp"])
+
+    def get_time(self):
+        """
+        Return current time
+
+        Returns:
+            dict: current time
+
+                {
+                    timestamp (int): current timestamp
+                    iso (string): current datetime in iso 8601 format
+                    year (int)
+                    month (int)
+                    day (int)
+                    hour (int)
+                    minute (int)
+                    weekday (int): 0=monday, 1=tuesday... 6=sunday
+                    weekday_literal (string): english literal weekday value (monday, tuesday, ...)
+                }
+
+        """
+        return self.__format_time()
 
     def set_hostname(self, hostname):
         """

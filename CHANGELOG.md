@@ -1,8 +1,11 @@
 # Changelog
 
-## [0.0.0]
+## [UNRELEASED]
 ### Changed
 - Clean code
+
+### Added
+- Add function to return current time data
 
 ## [2.1.1] - 2022-02-01
 ### Fixed
