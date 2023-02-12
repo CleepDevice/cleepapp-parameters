@@ -42,7 +42,7 @@ class Parameters(CleepModule):
     """
 
     MODULE_AUTHOR = "Cleep"
-    MODULE_VERSION = "2.1.1"
+    MODULE_VERSION = "2.2.0"
     MODULE_CATEGORY = "APPLICATION"
     MODULE_DEPS = []
     MODULE_DESCRIPTION = "Configure generic parameters of your device"

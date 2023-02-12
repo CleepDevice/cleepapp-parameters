@@ -11,7 +11,7 @@ from backend.parameterstimenowevent import ParametersTimeNowEvent
 from backend.parameterstimesunriseevent import ParametersTimeSunriseEvent
 from backend.parameterstimesunsetevent import ParametersTimeSunsetEvent
 from backend.timetomessageformatter import TimeToMessageFormatter
-from backend.timetonamedmessageformatter import TimeToNamedMessageFormatter
+from backend.timetoidentifiedmessageformatter import TimeToIdentifiedMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
 from mock import patch, MagicMock, Mock, ANY
@@ -24,7 +24,7 @@ class TestsParameters(unittest.TestCase):
 
     def setUp(self):
         self.session = session.TestSession(self)
-        logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
 
     def tearDown(self):
         self.session.clean()
@@ -660,12 +660,12 @@ class TestsTimeToMessageFormatter(unittest.TestCase):
 
 
 
-class TestsTimeToNamedMessageFormatter(unittest.TestCase):
+class TestsTimeToIdentifiedMessageFormatter(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         events_broker = Mock()
-        self.formatter = TimeToNamedMessageFormatter({'events_broker': events_broker})
+        self.formatter = TimeToIdentifiedMessageFormatter({'events_broker': events_broker})
 
     def test_fill_profile(self):
         event_params = {
@@ -684,7 +684,7 @@ class TestsTimeToNamedMessageFormatter(unittest.TestCase):
         profile = Mock()
         profile = self.formatter._fill_profile(event_params, profile)
         
-        self.assertEqual(profile.name, 'currenttime')
+        self.assertEqual(profile.id, 'currenttime')
         self.assertEqual(profile.message, '09:49 12/04/2021')
 
 

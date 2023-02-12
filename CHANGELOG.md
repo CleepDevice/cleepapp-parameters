@@ -1,8 +1,9 @@
 # Changelog
 
-## [UNRELEASED]
+## [2.2.0] - 2023-02-12
 ### Changed
 - Clean code
+- Update code after core changes (profiles)
 
 ### Added
 - Add function to return current time data

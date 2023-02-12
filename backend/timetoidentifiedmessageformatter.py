@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from cleep.libs.internals.profileformatter import ProfileFormatter
-from cleep.profiles.namedmessageprofile import NamedMessageProfile
+from cleep.profiles.identifiedmessageprofile import IdentifiedMessageProfile
 
 
-class TimeToNamedMessageFormatter(ProfileFormatter):
+class TimeToIdentifiedMessageFormatter(ProfileFormatter):
     """
     Time data to NamedMessageProfile
     """
@@ -18,7 +18,7 @@ class TimeToNamedMessageFormatter(ProfileFormatter):
             params (dict): formatter parameters
         """
         ProfileFormatter.__init__(
-            self, params, "parameters.time.now", NamedMessageProfile()
+            self, params, "parameters.time.now", IdentifiedMessageProfile()
         )
 
     def _fill_profile(self, event_params, profile):
@@ -29,7 +29,7 @@ class TimeToNamedMessageFormatter(ProfileFormatter):
             event_params (dict): event parameters
             profile (Profile): profile instance
         """
-        profile.name = "currenttime"
+        profile.id = "currenttime"
 
         # append current time
         profile.message = "%02d:%02d %02d/%02d/%d" % (
