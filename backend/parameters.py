@@ -51,9 +51,9 @@ class Parameters(CleepModule):
     )
     MODULE_TAGS = ["configuration", "date", "time", "locale", "lang"]
     MODULE_COUNTRY = None
-    MODULE_URLINFO = "https://github.com/tangb/cleepmod-parameters"
+    MODULE_URLINFO = "https://github.com/CleepDevice/cleepapp-parameters"
     MODULE_URLHELP = None
-    MODULE_URLBUGS = "https://github.com/tangb/cleepmod-parameters/issues"
+    MODULE_URLBUGS = "https://github.com/CleepDevice/cleepapp-parameters/issues"
     MODULE_URLSITE = None
 
     MODULE_CONFIG_FILE = "parameters.conf"
@@ -590,9 +590,7 @@ class Parameters(CleepModule):
         # launch timezone update in background
         self.logger.debug("Updating system timezone")
         command = Console()
-        res = command.command(
-            "dpkg-reconfigure -f noninteractive tzdata", timeout=60.0
-        )
+        res = command.command("dpkg-reconfigure -f noninteractive tzdata", timeout=60.0)
         self.logger.debug("Timezone update command result: %s" % res)
         if res["returncode"] != 0:
             self.logger.error("Error reconfiguring system timezone: %s" % res["stderr"])
