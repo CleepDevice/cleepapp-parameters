@@ -28,12 +28,6 @@ class TimeToMessageFormatter(ProfileFormatter):
             profile (Profile): profile instance
         """
         # append current time
-        profile.message = "%02d:%02d %02d/%02d/%d" % (
-            event_params["hour"],
-            event_params["minute"],
-            event_params["day"],
-            event_params["month"],
-            event_params["year"],
-        )
+        profile.message = f"{event_params['hour']:02d}:{event_params['minute']:02d} {event_params['day']:02d}/{event_params['month']:02d}/{event_params['year']}"
 
         return profile

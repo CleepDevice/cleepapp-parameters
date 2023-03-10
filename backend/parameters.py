@@ -130,9 +130,9 @@ class Parameters(CleepModule):
 
         # store device uuids for events
         devices = self.get_module_devices()
-        for uuid in devices:
-            if devices[uuid]["type"] == "clock":
-                self.__clock_uuid = uuid
+        for (device_uuid, device) in devices.items():
+            if device["type"] == "clock":
+                self.__clock_uuid = device_uuid
 
     def _on_start(self):
         """
@@ -193,13 +193,13 @@ class Parameters(CleepModule):
         """
         devices = super().get_module_devices()
 
-        for uuid in devices:
-            if devices[uuid]["type"] == "clock":
+        for device in devices.values():
+            if device["type"] == "clock":
                 data = self.__format_time()
                 data.update(
                     {"sunrise": self.suns["sunrise"], "sunset": self.suns["sunset"]}
                 )
-                devices[uuid].update(data)
+                device.update(data)
 
         return devices
 
@@ -263,8 +263,8 @@ class Parameters(CleepModule):
         """
         if Parameters.sync_time():
             self.logger.info(
-                "Time synchronized with NTP server (%s)"
-                % datetime.datetime.utcnow().isoformat()
+                "Time synchronized with NTP server (%s)",
+                datetime.datetime.utcnow().isoformat(),
             )
             self.sync_time_task.stop()
             self.sync_time_task = None
@@ -274,7 +274,7 @@ class Parameters(CleepModule):
         Time task used to refresh time
         """
         now_formatted = self.__format_time()
-        self.logger.trace("now_formatted: %s" % now_formatted)
+        self.logger.trace("now_formatted: %s", now_formatted)
 
         # send now event
         now_event_params = copy.deepcopy(now_formatted)
@@ -446,9 +446,7 @@ class Parameters(CleepModule):
             self.sun.set_position(position["latitude"], position["longitude"])
             self.sunset = self.sun.sunset().astimezone(self.timezone)
             self.sunrise = self.sun.sunrise().astimezone(self.timezone)
-            self.logger.debug(
-                "Found sunrise:%s sunset:%s" % (self.sunrise, self.sunset)
-            )
+            self.logger.debug("Found sunrise:%s sunset:%s", self.sunrise, self.sunset)
 
             # save times
             self.suns["sunrise"] = int(self.sunrise.strftime("%s"))
@@ -467,7 +465,7 @@ class Parameters(CleepModule):
         position = self._get_config_field("position")
         if not position["latitude"] and not position["longitude"]:
             self.logger.debug(
-                "Unable to set country from unspecified position (%s)" % position
+                "Unable to set country from unspecified position (%s)", position
             )
             return
 
@@ -478,9 +476,7 @@ class Parameters(CleepModule):
             coordinates = ((position["latitude"], position["longitude"]),)
             # need a tuple
             geo = reverse_geocode.search(coordinates)
-            self.logger.debug(
-                "Found country infos from position %s: %s" % (position, geo)
-            )
+            self.logger.debug("Found country infos from position %s: %s", position, geo)
             if (
                 geo
                 and len(geo) > 0
@@ -501,7 +497,7 @@ class Parameters(CleepModule):
             raise
 
         except Exception:
-            self.logger.exception("Unable to find country for position %s:" % position)
+            self.logger.exception("Unable to find country for position %s:", position)
 
     def get_country(self):
         """
@@ -532,7 +528,7 @@ class Parameters(CleepModule):
         position = self._get_config_field("position")
         if not position["latitude"] and not position["longitude"]:
             self.logger.warning(
-                "Unable to set timezone from unspecified position (%s)" % position
+                "Unable to set timezone from unspecified position (%s)", position
             )
             return False
 
@@ -561,29 +557,29 @@ class Parameters(CleepModule):
             return False
 
         # save timezone value
-        self.logger.debug("Save new timezone: %s" % current_timezone)
+        self.logger.debug("Save new timezone: %s", current_timezone)
         if not self._set_config_field("timezone", current_timezone):
             raise CommandError("Unable to save timezone")
 
         # configure system timezone
         zoneinfo = os.path.join(self.SYSTEM_ZONEINFO_DIR, current_timezone)
-        self.logger.debug("Checking zoneinfo file: %s" % zoneinfo)
+        self.logger.debug("Checking zoneinfo file: %s", zoneinfo)
         if not os.path.exists(zoneinfo):
             raise CommandError(
-                'No system file found for "%s" timezone' % current_timezone
+                f'No system file found for "{current_timezone}" timezone'
             )
-        self.logger.debug('zoneinfo file "%s" exists' % zoneinfo)
+        self.logger.debug('zoneinfo file "%s" exists', zoneinfo)
         self.cleep_filesystem.rm(self.SYSTEM_LOCALTIME)
 
         self.logger.debug(
-            'Writing timezone "%s" in "%s"' % (current_timezone, self.SYSTEM_TIMEZONE)
+            'Writing timezone "%s" in "%s"', current_timezone, self.SYSTEM_TIMEZONE
         )
         if not self.cleep_filesystem.write_data(
-            self.SYSTEM_TIMEZONE, "%s" % current_timezone
+            self.SYSTEM_TIMEZONE, f"{current_timezone}"
         ):
             self.logger.error(
-                'Unable to write timezone data on "%s". System timezone is not configured!'
-                % self.SYSTEM_TIMEZONE
+                'Unable to write timezone data on "%s". System timezone is not configured!',
+                self.SYSTEM_TIMEZONE,
             )
             return False
 
@@ -591,9 +587,9 @@ class Parameters(CleepModule):
         self.logger.debug("Updating system timezone")
         command = Console()
         res = command.command("dpkg-reconfigure -f noninteractive tzdata", timeout=60.0)
-        self.logger.debug("Timezone update command result: %s" % res)
+        self.logger.debug("Timezone update command result: %s", res)
         if res["returncode"] != 0:
-            self.logger.error("Error reconfiguring system timezone: %s" % res["stderr"])
+            self.logger.error("Error reconfiguring system timezone: %s", res["stderr"])
             return False
 
         # propagate changes to cleep
