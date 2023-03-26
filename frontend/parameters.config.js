@@ -27,6 +27,12 @@ function(toast, parametersService, cleepService, $timeout) {
             alpha2: null
         };
         self.timezone = null;
+        self.auth = {
+            enabled: false,
+            accounts: [],
+        };
+        self.newAccount = '';
+        self.newPassword = '';
 
         /**
          * Set hostname
@@ -58,12 +64,42 @@ function(toast, parametersService, cleepService, $timeout) {
 
             toast.loading('Setting localisation...');
             parametersService.setPosition($scope.cleepposition.lat, $scope.cleepposition.lng)
-                .then(function(resp) {
-                    return cleepService.reloadModuleConfig('parameters');
-                })
+                .then(() => cleepService.reloadModuleConfig('parameters'))
                 .then(function(config) {
                     self.updateConfig(config);
                     toast.success('Localisation saved');
+                });
+        };
+
+        /**
+         * Auth
+         */
+        self.toggleAuth = function() {
+            const call = !self.auth.enabled ? parametersService.disableAuth : parametersService.enableAuth;
+            call().then(() => cleepService.reloadModuleConfig('parameters'))
+                .then((config) => {
+                    self.updateConfig(config);
+                    toast.success('Secured access updated');
+                });
+        };
+
+        self.deleteAuthAccount = function(account) {
+            parametersService.deleteAuthAccount(account)
+                .then(() => cleepService.reloadModuleConfig('parameters'))
+                .then((config) => {
+                    self.updateConfig(config);
+                    toast.success('Account deleted');
+                });
+        };
+
+        self.addAuthAccount = function() {
+            parametersService.addAuthAccount(self.newAccount, self.newPassword)
+                .then(() => cleepService.reloadModuleConfig('parameters'))
+                .then((config) => {
+                    self.updateConfig(config);
+                    self.newAccount = '';
+                    self.newPassword = '';
+                    toast.success('Account created');
                 });
         };
 
@@ -76,6 +112,8 @@ function(toast, parametersService, cleepService, $timeout) {
             self.sun = config.sun;
             self.country = config.country;
             self.timezone = config.timezone;
+            self.auth.enabled = config.authenabled;
+            cleepService.syncVar(self.auth.accounts, config.authaccounts);
         };
 
         /**

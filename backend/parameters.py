@@ -8,6 +8,7 @@ import importlib
 import re
 import datetime
 from threading import Timer
+import requests
 import reverse_geocode
 from timezonefinder import TimezoneFinder
 from pytz import utc, timezone
@@ -22,6 +23,7 @@ from cleep.libs.configs.hostname import Hostname
 from cleep.libs.internals.sun import Sun
 from cleep.libs.internals.console import Console
 from cleep.libs.internals.task import Task
+from cleep.libs.configs.cleepconf import CleepConf
 
 __all__ = ["Parameters"]
 
@@ -34,6 +36,7 @@ class Parameters(CleepModule):
 
         * system time(current time, sunset, sunrise) according to position
         * system locale
+        * auth
 
     Useful doc:
 
@@ -49,7 +52,15 @@ class Parameters(CleepModule):
     MODULE_LONGDESCRIPTION = (
         "Application that helps you to configure generic parameters of your device"
     )
-    MODULE_TAGS = ["configuration", "date", "time", "locale", "lang"]
+    MODULE_TAGS = [
+        "configuration",
+        "date",
+        "time",
+        "locale",
+        "lang",
+        "auth",
+        "security",
+    ]
     MODULE_COUNTRY = None
     MODULE_URLINFO = "https://github.com/CleepDevice/cleepapp-parameters"
     MODULE_URLHELP = None
@@ -93,11 +104,13 @@ class Parameters(CleepModule):
         self.time_task = None
         self.sync_time_task = None
         self.__clock_uuid = None
+        self.cleep_conf = CleepConf(self.cleep_filesystem)
         # code from https://stackoverflow.com/a/106223
         self.__hostname_pattern = (
             r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*"
             r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
         )
+        self.rpc_url = bootstrap.get("rpc_config", {}).get("url")
 
         # events
         self.time_now_event = self._get_event("parameters.time.now")
@@ -181,6 +194,10 @@ class Parameters(CleepModule):
         config["sun"] = self.get_sun()
         config["country"] = self.get_country()
         config["timezone"] = self.get_timezone()
+
+        auth_conf = self.cleep_conf.get_auth()
+        config["authenabled"] = auth_conf.get("enabled", False)
+        config["authaccounts"] = auth_conf.get("accounts", [])
 
         return config
 
@@ -712,3 +729,109 @@ class Parameters(CleepModule):
         """
         today = datetime.date.today()
         return self.is_non_working_day(today.isoformat())
+
+    def get_auth_account(self):
+        """
+        Return auth accounts
+
+        Returns:
+            list: list of account names
+        """
+        return self.cleep_conf.get_auth_accounts()
+
+    def add_auth_account(self, account, password):
+        """
+        Add new auth account
+
+        Args:
+            account (str): account name
+            password (str): account password (will be encrypted)
+
+        Raises:
+            CommandError: if adding account failed
+        """
+        self._check_parameters(
+            [
+                {
+                    "name": "account",
+                    "type": str,
+                    "value": account,
+                    "none": False,
+                    "empty": False,
+                },
+                {
+                    "name": "password",
+                    "type": str,
+                    "value": password,
+                    "none": False,
+                    "empty": False,
+                },
+            ]
+        )
+
+        try:
+            self.cleep_conf.add_auth_account(account, password)
+            self.__reload_rpcserver_auth()
+        except Exception as error:
+            raise CommandError(str(error))
+
+    def delete_auth_account(self, account):
+        """
+        Delete auth account
+
+        Args:
+            account (str): account name
+
+        Raises:
+            CommandError: if error occured
+        """
+        self._check_parameters(
+            [
+                {
+                    "name": "account",
+                    "type": str,
+                    "value": account,
+                    "none": False,
+                    "empty": False,
+                },
+            ]
+        )
+
+        try:
+            self.cleep_conf.delete_auth_account(account)
+            self.__reload_rpcserver_auth()
+        except Exception as error:
+            raise CommandError(str(error))
+
+    def enable_auth(self):
+        """
+        Enable auth
+
+        Raises:
+            CommandError if error occured
+        """
+        accounts = self.cleep_conf.get_auth_accounts()
+        if len(accounts) == 0:
+            raise CommandError("Please add account before enabling auth")
+
+        self.cleep_conf.enable_auth(True)
+        self.__reload_rpcserver_auth()
+
+    def disable_auth(self):
+        """
+        Disable auth
+        """
+        self.cleep_conf.enable_auth(enable=False)
+        self.__reload_rpcserver_auth()
+
+    def __reload_rpcserver_auth(self):
+        """
+        Reload RPC server auth configuration
+        """
+        self.logger.debug("Rpc url=", self.rpc_url)
+        try:
+            url = f"{self.rpc_url}/reloadauth"
+            response = requests.post(url, verify=False)
+            response.raise_for_status()
+        except:
+            self.logger.exception("Unable to reload auth on RPC server")

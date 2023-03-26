@@ -19,14 +19,33 @@ function($rootScope, rpcService, cleepService) {
      * Set hostname
      */
     self.setHostname = function(hostname) {
-        return rpcService.sendCommand('set_hostname', 'parameters', {'hostname':hostname});
+        return rpcService.sendCommand('set_hostname', 'parameters', { hostname });
     };
 
     /**
      * Set position
      */
-    self.setPosition = function(lat, long) {
-        return rpcService.sendCommand('set_position', 'parameters', {'latitude':lat, 'longitude':long}, 20);
+    self.setPosition = function(latitude, longitude) {
+        return rpcService.sendCommand('set_position', 'parameters', { latitude, longitude }, 30);
+    };
+
+    /**
+     * Auth
+     */
+    self.enableAuth = function() {
+        return rpcService.sendCommand('enable_auth', 'parameters');
+    };
+
+    self.disableAuth = function() {
+        return rpcService.sendCommand('disable_auth', 'parameters');
+    };
+
+    self.addAuthAccount = function(account, password) {
+        return rpcService.sendCommand('add_auth_account', 'parameters', { account, password });
+    };
+
+    self.deleteAuthAccount = function(account) {
+        return rpcService.sendCommand('delete_auth_account', 'parameters', { account });
     };
 
     /**

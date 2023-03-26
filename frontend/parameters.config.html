@@ -1,9 +1,10 @@
 <div layout="column" ng-cloak class="module-padding">
 
     <!-- navigation tabs -->
-    <md-nav-bar md-selected-nav-item="parametersCtl.tabIndex" nav-bar-aria-label="Parameters tabs">
+    <md-nav-bar md-selected-nav-item="parametersCtl.tabIndex">
         <md-nav-item md-nav-click="goto('hostname')" name="hostname">Device name</md-nav-item>
         <md-nav-item md-nav-click="goto('position')" name="position">Localisation</md-nav-item>
+        <md-nav-item md-nav-click="goto('auth')" name="auth">Secured access</md-nav-item>
     </md-nav-bar>
 
     <!-- device name -->
@@ -18,7 +19,7 @@
                 <div class="md-secondary">
                     <form name="hostnameForm">
                     <md-input-container class="no-margin" md-no-float>
-                        <input ng-model="parametersCtl.hostname" ng-pattern="parametersCtl.hostnamePattern" aria="Hostname" placeholder="Hostname">
+                        <input ng-model="parametersCtl.hostname" ng-pattern="parametersCtl.hostnamePattern" placeholder="Hostname">
                     </md-input-container>
                     <md-button ng-click="parametersCtl.setHostname()" class="md-raised md-primary" ng-disabled="hostnameForm.$invalid">
                         <md-icon md-svg-icon="rename-box"></md-icon>
@@ -80,11 +81,56 @@
                     <md-icon md-svg-icon="crosshairs-gps"></md-icon>
                     Set position
                 </md-button>
-            <div>
+            </div>
             <div style="padding:7px;">
                 <leaflet center="cleepposition" defaults="cleepdefaults" height="480px"></leaflet>
             </div>
         </div>
+    </div>
+
+    <!-- auth -->
+    <div layout="column" layout-padding ng-if="parametersCtl.tabIndex=='auth'">
+        <md-list>
+            <md-list-item>
+                <md-icon md-svg-icon="chevron-right"></md-icon>
+                <p>Enable secured access (at least one account must exists)</p>
+                <md-checkbox
+                    class="md-secondary"
+                    ng-model="parametersCtl.auth.enabled"
+                    ng-change="parametersCtl.toggleAuth()"
+                ></md-checkbox>
+            </md-list-item>
+            <md-subheader class="md-no-sticky">Create new account</md-subheader>
+            <md-list-item>
+                <md-icon md-svg-icon="chevron-right"></md-icon>
+                <p>New account name</p>
+                <md-input-container class="md-secondary no-margin" md-no-float>
+                    <input ng-model="parametersCtl.newAccount" placeholder="account"></input>
+                </md-input-container>
+            </md-list-item>
+            <md-list-item>
+                <md-icon md-svg-icon="chevron-right"></md-icon>
+                <p>New account password</p>
+                <md-input-container class="md-secondary no-margin" md-no-float>
+                    <input type="password" ng-model="parametersCtl.newPassword" placeholder="password"></input>
+                </md-input-container>
+            </md-list-item>
+            <md-list-item>
+                <md-button class="md-secondary md-raised md-primary" ng-click="parametersCtl.addAuthAccount()">
+                    <md-icon md-svg-icon="content-save-outline"></md-icon>
+                    Add account
+                </md-button>
+            </md-list-item>
+            </md-list-item>
+            <md-subheader class="md-no-sticky">Accounts list</md-subheader>
+            <md-list-item ng-repeat="account in parametersCtl.auth.accounts">
+                <md-icon md-svg-icon="chevron-right"></md-icon>
+                <p>{{ account }}</p>
+                <md-input class="md-secondary" ng-click="parametersCtl.deleteAuthAccount(account)">
+                    <md-icon md-svg-icon="trash-can-outline"></md-icon>
+                </md-input>
+            </md-list-item>
+        </md-list>
     </div>
 
 </div>
