@@ -35,7 +35,31 @@ function(toast, parametersService, cleepService, $timeout) {
         self.newPassword = '';
 
         /**
-         * Set hostname
+         * Init controller
+         */
+        self.$onInit = function() {
+            cleepService.getModuleConfig('parameters')
+                .then(function(config) {
+                    self.updateConfig(config);
+
+                    // init leaflet
+                    angular.extend($scope, {
+                        cleepposition: {
+                            lat: self.position.latitude,
+                            lng: self.position.longitude,
+                            zoom: 8
+                        },
+                        cleepdefaults: {
+                            scrollWheelZoom: false,
+                            minZoom: 5,
+                            maxZoom: 12
+                        }
+                    });
+                });
+        };
+
+        /**
+         * Hostname
          */
         self.setHostname = function() {
             parametersService.setHostname(self.hostname)
@@ -49,7 +73,7 @@ function(toast, parametersService, cleepService, $timeout) {
         };
 
         /**
-         * Set position
+         * Position
          */
         self.setPosition = function() {
             // check values
@@ -116,29 +140,6 @@ function(toast, parametersService, cleepService, $timeout) {
             cleepService.syncVar(self.auth.accounts, config.authaccounts);
         };
 
-        /**
-         * Init controller
-         */
-        self.$onInit = function() {
-            cleepService.getModuleConfig('parameters')
-                .then(function(config) {
-                    self.updateConfig(config);
-
-                    // init leaflet
-                    angular.extend($scope, {
-                        cleepposition: {
-                            lat: self.position.latitude,
-                            lng: self.position.longitude,
-                            zoom: 8
-                        },
-                        cleepdefaults: {
-                            scrollWheelZoom: false,
-                            minZoom: 5,
-                            maxZoom: 12
-                        }
-                    });
-                });
-        };
     }];
 
     return {
