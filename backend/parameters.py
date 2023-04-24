@@ -329,7 +329,7 @@ class Parameters(CleepModule):
         Return current time
 
         Returns:
-            dict: current time
+            dict: current time::
 
                 {
                     timestamp (int): current timestamp
@@ -645,7 +645,7 @@ class Parameters(CleepModule):
         Return non working days of current year
 
         Args:
-            year (int): get non working day for specified year. If not specified use current year
+            year (int, optional): get non working day for specified year. If not specified use current year. Defaults to None.
 
         Returns:
             list: list of non working days of the year. List can be empty if error occured::
@@ -721,9 +721,6 @@ class Parameters(CleepModule):
         """
         Check if today is non working day according to current locale configuration
 
-        Args:
-            day (datetime.date): day to check
-
         Returns:
             bool: True if specified day is a non working day, False otherwise
         """
@@ -735,7 +732,14 @@ class Parameters(CleepModule):
         Return auth accounts
 
         Returns:
-            list: list of account names
+            list: list of account names::
+
+                [
+                    account1 (str),
+                    account2 (str,
+                    ...
+                ]
+
         """
         return self.cleep_conf.get_auth_accounts()
 
@@ -808,7 +812,7 @@ class Parameters(CleepModule):
         Enable auth
 
         Raises:
-            CommandError if error occured
+            CommandError: if error occured
         """
         accounts = self.cleep_conf.get_auth_accounts()
         if len(accounts) == 0:

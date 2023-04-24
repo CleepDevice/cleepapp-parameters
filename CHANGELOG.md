@@ -4,6 +4,9 @@
 ### Added
 - Handle secured access (aka auth)
 
+### Fixed
+- Fix documentation
+
 ## [2.2.0] - 2023-03-10
 ### Changed
 - Clean code
