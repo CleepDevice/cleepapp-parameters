@@ -645,7 +645,7 @@ class Parameters(CleepModule):
         Return non working days of current year
 
         Args:
-            year (int, optional): get non working day for specified year. If not specified use current year. Defaults to None.
+            date (int, optional): get non working day for specified year. If not specified use current year. Defaults to None.
 
         Returns:
             list: list of non working days of the year. List can be empty if error occured::
@@ -698,7 +698,8 @@ class Parameters(CleepModule):
         Check if specified day is non working day according to current locale configuration
 
         Args:
-            day (string): day to check (must be iso format XXXX-MM-DD)
+            day (str): day to check (must be iso format XXXX-MM-DD)
+            test (bool): new param
 
         Returns:
             bool: True if specified day is a non working day, False otherwise
@@ -748,8 +749,9 @@ class Parameters(CleepModule):
         Add new auth account
 
         Args:
-            account (str): account name
+            account (bool): account name
             password (str): account password (will be encrypted)
+            toto (bool, optional): new param. Defaults to False.
 
         Raises:
             CommandError: if adding account failed
