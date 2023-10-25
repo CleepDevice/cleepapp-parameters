@@ -7,6 +7,9 @@
 ### Fixed
 - Fix documentation
 
+### Updated
+- Use cleep config components
+
 ## [2.2.0] - 2023-03-10
 ### Changed
 - Clean code

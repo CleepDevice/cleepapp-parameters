@@ -1,12 +1,32 @@
 {
     "icon": "tune-vertical",
     "global": {
-        "js": ["clock.widget.js", "parameters.service.js"],
-        "html": ["clock.widget.html"]
+        "js": ["parameters.service.js"],
+        "html": []
     },
     "config": {
-        "js": ["parameters.config.js", "leaflet.js", "angular-simple-logger.min.js", "ui-leaflet.min.no-header.js"],
+        "js": ["parameters.config.js", "leaflet.js", "angular-simple-logger.min.js", "ui-leaflet.min.no-header.js", "config-map.component.js"],
         "css": ["leaflet.css"],
         "html": ["parameters.config.html"]
+    },
+    "widgets": {
+        "clock": {
+            "header": {
+                "icon": "clock"
+            },
+            "content": "<span class=\"md-display-1\">{{ device.hour | padzero }}:{{ device.minute | padzero }}</span>",
+            "footer": [
+                {
+                    "icon": "weather-sunset-up",
+                    "tooltip": "Sunrise",
+                    "label": "{{ device.sunrise | hrTime }}"
+                },
+                {
+                    "icon": "weather-sunset-down",
+                    "tooltip": "Sunset",
+                    "label": "{{ device.sunset | hrTime }}"
+                }
+            ]
+        }
     }
 }

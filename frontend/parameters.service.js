@@ -7,6 +7,10 @@ angular
 .service('parametersService', ['$rootScope', 'rpcService', 'cleepService',
 function($rootScope, rpcService, cleepService) {
     var self = this;
+
+    self.test = function() {
+        console.log('***************');
+    };
     
     /**
      * Get sunset/sunrise

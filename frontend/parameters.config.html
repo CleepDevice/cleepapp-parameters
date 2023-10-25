@@ -1,136 +1,59 @@
 <div layout="column" ng-cloak class="module-padding">
 
     <!-- navigation tabs -->
-    <md-nav-bar md-selected-nav-item="parametersCtl.tabIndex">
+    <md-nav-bar md-selected-nav-item="$ctrl.tabIndex">
         <md-nav-item md-nav-click="goto('hostname')" name="hostname">Device name</md-nav-item>
         <md-nav-item md-nav-click="goto('position')" name="position">Localisation</md-nav-item>
         <md-nav-item md-nav-click="goto('auth')" name="auth">Secured access</md-nav-item>
     </md-nav-bar>
 
     <!-- device name -->
-    <div layout="column" layout-padding ng-if="parametersCtl.tabIndex=='hostname'">
-        <md-list>
-            <md-list-item class="md-2-line">
-                <md-icon md-svg-icon="chevron-right"></md-icon>
-                <div class="md-list-item-text">
-                    <h3>Set device name</h3>
-                    <p>Name must contain digits, chars and hyphens only. It cannot starts and ends with hyphen, cannot starts with digit.
-                </div>
-                <div class="md-secondary">
-                    <form name="hostnameForm">
-                    <md-input-container class="no-margin" md-no-float>
-                        <input ng-model="parametersCtl.hostname" ng-pattern="parametersCtl.hostnamePattern" placeholder="Hostname">
-                    </md-input-container>
-                    <md-button ng-click="parametersCtl.setHostname()" class="md-raised md-primary" ng-disabled="hostnameForm.$invalid">
-                        <md-icon md-svg-icon="rename-box"></md-icon>
-                        Set device name
-                    </md-button>
-                    </form>
-                </div>
-            </md-list-item>
-        </md-list>
+    <div layout="column" layout-padding ng-if="$ctrl.tabIndex=='hostname'">
+        <config-text
+            cl-title="Set device name" cl-subtitle="Name must contain digits, chars and hyphens only. It cannot starts and ends with hyphen, cannot starts with digit."
+            cl-btn-icon="rename"
+            cl-model="$ctrl.hostname" cl-click="$ctrl.setHostname()"
+        ></config-text>
     </div>
 
     <!-- localisation -->
-    <div layout="row" layout-padding ng-if="parametersCtl.tabIndex=='position'">
-        <div flex="50" layout="column" layout-padding>
-            <div>
-                To adjust automatically device time and lang please center approximatively your device position on the map.
-                <br/>This will also allow the device to compute sunset and sunrise times.
-            </div>
-            <div>
-                Keep in mind that all your personal data remain private and stored only on your device.
-            </div>
-            <div>
-                <md-list>
-                    <md-subheader class="md-no-sticky">Device localisation values</md-subheader>
-                    <md-list-item>
-                        <md-icon md-svg-icon="chevron-right"></md-icon>
-                        <p>
-                            Sunrise time: {{parametersCtl.sun.sunrise | hrTime}}
-                        </p>
-                    </md-list-item>
-                    <md-list-item>
-                        <md-icon md-svg-icon="chevron-right"></md-icon>
-                        <p>
-                            Sunset time: {{parametersCtl.sun.sunset | hrTime}}
-                        </p>
-                    </md-list-item>
-                    <md-list-item>
-                        <md-icon md-svg-icon="chevron-right"></md-icon>
-                        <p>
-                            <span>Country:</span> 
-                            <span ng-bind="parametersCtl.country.country || '-'"></span> 
-                            <span ng-if="parametersCtl.country.alpha2">({{parametersCtl.country.alpha2}})</span>
-                        </p>
-                    </md-list-item>
-                    <md-list-item>
-                        <md-icon md-svg-icon="chevron-right"></md-icon>
-                        <p>
-                            <span>Timezone:</span> 
-                            <span ng-bind="parametersCtl.timezone || '-'"></span>
-                        </p>
-                    </md-list-item>
-                </md-list>
-            </div>
+    <div layout="column" layout-padding ng-if="$ctrl.tabIndex=='position'">
+        <config-section cl-title="Device localisation" cl-icon="earth"></config-section>
+        <config-note
+            cl-icon="information-outline"
+            cl-note="To adjust automatically device time and lang please center approximatively your device position on the map.<br>This will also allow the device to compute sunset and sunrise times.<br><br>Keep in mind that all your personal data remain private and stored only on your device."
+        ></config-note>
+        <config-map cl-title="Select approximative device position on map to compute localisation values"
+            cl-latitude="$ctrl.position.latitude" cl-longitude="$ctrl.position.longitude"
+            cl-click="$ctrl.setPosition(latitude, longitude)"
+        ></config-map>
 
-        </div>
-        <div flex="50" layout="column" layout-padding layout-align="start stretch">
-            <div layout="column" layout="center stretch">
-                <md-button class="md-raised md-primary" ng-click="parametersCtl.setPosition()">
-                    <md-icon md-svg-icon="crosshairs-gps"></md-icon>
-                    Set position
-                </md-button>
-            </div>
-            <div style="padding:7px;">
-                <leaflet center="cleepposition" defaults="cleepdefaults" height="480px"></leaflet>
-            </div>
-        </div>
+        <config-section cl-title="Device localisation values" cl-icon="map-marker"></config-section>
+        <config-info cl-title="Sunrise time" cl-content="$ctrl.sun.sunrise | hrTime"></config-info>
+        <config-info cl-title="Sunset time" cl-content="$ctrl.sun.sunset | hrTime"></config-info>
+        <config-info cl-title="Country" cl-content="$ctrl.country.country"></config-info>
+        <config-info cl-title="Country alpha code" cl-content="$ctrl.country.alpha2"></config-info>
+        <config-info cl-title="Timezone" cl-content="$ctrl.timezone"></config-info>
     </div>
 
     <!-- auth -->
-    <div layout="column" layout-padding ng-if="parametersCtl.tabIndex=='auth'">
-        <md-list>
-            <md-list-item>
-                <md-icon md-svg-icon="chevron-right"></md-icon>
-                <p>Enable secured access (at least one account must exists)</p>
-                <md-checkbox
-                    class="md-secondary"
-                    ng-model="parametersCtl.auth.enabled"
-                    ng-change="parametersCtl.toggleAuth()"
-                ></md-checkbox>
-            </md-list-item>
-            <md-subheader class="md-no-sticky">Create new account</md-subheader>
-            <md-list-item>
-                <md-icon md-svg-icon="chevron-right"></md-icon>
-                <p>New account name</p>
-                <md-input-container class="md-secondary no-margin" md-no-float>
-                    <input ng-model="parametersCtl.newAccount" placeholder="account"></input>
-                </md-input-container>
-            </md-list-item>
-            <md-list-item>
-                <md-icon md-svg-icon="chevron-right"></md-icon>
-                <p>New account password</p>
-                <md-input-container class="md-secondary no-margin" md-no-float>
-                    <input type="password" ng-model="parametersCtl.newPassword" placeholder="password"></input>
-                </md-input-container>
-            </md-list-item>
-            <md-list-item>
-                <md-button class="md-secondary md-raised md-primary" ng-click="parametersCtl.addAuthAccount()">
-                    <md-icon md-svg-icon="content-save-outline"></md-icon>
-                    Add account
-                </md-button>
-            </md-list-item>
-            </md-list-item>
-            <md-subheader class="md-no-sticky">Accounts list</md-subheader>
-            <md-list-item ng-repeat="account in parametersCtl.auth.accounts">
-                <md-icon md-svg-icon="chevron-right"></md-icon>
-                <p>{{ account }}</p>
-                <md-input class="md-secondary" ng-click="parametersCtl.deleteAuthAccount(account)">
-                    <md-icon md-svg-icon="trash-can-outline"></md-icon>
-                </md-input>
-            </md-list-item>
-        </md-list>
+    <div layout="column" layout-padding ng-if="$ctrl.tabIndex=='auth'">
+        <config-switch
+            cl-title="Enable secured access (at least one account must exists)"
+            cl-icon="shield-lock" cl-model="$ctrl.auth.enabled" cl-click="$ctrl.setAuth(value)"
+        ></config-switch>
+
+        <config-section cl-title="Create new account" cl-icon="account-plus"></config-section>
+        <config-text cl-title="Account name" cl-model="$ctrl.newAccount"></config-text>
+        <config-text cl-title="Account password" cl-model="$ctrl.newPassword" cl-password="true"></config-text>
+        <config-button
+            cl-icon="" cl-btn-icon="account-plus" cl-btn-label="Add account"
+            cl-click="$ctrl.addAuthAccount()"
+        ></config-button>
+
+        <config-section cl-title="Existing accounts" cl-icon="account-multiple"></config-section>
+        <config-list cl-items="$ctrl.auth.accounts"></config-list>
+
     </div>
 
 </div>
