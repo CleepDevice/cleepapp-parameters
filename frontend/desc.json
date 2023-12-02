@@ -19,12 +19,14 @@
                 {
                     "icon": "weather-sunset-up",
                     "tooltip": "Sunrise",
-                    "label": "{{ device.sunrise | hrTime }}"
+                    "attr": "sunrise",
+                    "filter": "hrTime"
                 },
                 {
                     "icon": "weather-sunset-down",
                     "tooltip": "Sunset",
-                    "label": "{{ device.sunset | hrTime }}"
+                    "attr": "sunset",
+                    "filter": "hrTime"
                 }
             ]
         }
