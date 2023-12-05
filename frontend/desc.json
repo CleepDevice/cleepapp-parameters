@@ -14,7 +14,24 @@
             "header": {
                 "icon": "clock"
             },
-            "content": "<span class=\"md-display-1\">{{ device.hour | padzero }}:{{ device.minute | padzero }}</span>",
+            "content": {
+                "layout": {
+                    "align": "center center"
+                },
+                "items": [
+                    {
+                        "attr": "hour",
+                        "filter": "padzero"
+                    },
+                    {
+                        "text": ":"
+                    },
+                    {
+                        "attr": "minute",
+                        "filter": "padzero"
+                    }
+                ]
+            },
             "footer": [
                 {
                     "icon": "weather-sunset-up",
