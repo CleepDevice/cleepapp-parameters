@@ -14,7 +14,7 @@ from backend.timetomessageformatter import TimeToMessageFormatter
 from backend.timetoidentifiedmessageformatter import TimeToIdentifiedMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
-from mock import patch, MagicMock, Mock, ANY
+from unittest.mock import patch, MagicMock, Mock, ANY
 from cleep.libs.tests.mockdatetime import mock_datetime
 import datetime
 import pytz
@@ -52,7 +52,7 @@ class TestsParameters(unittest.TestCase):
             get_auth_get_mock.get = Mock(side_effect=[True, ['account1']])
             mock_cleepconf.return_value.get_auth.return_value = get_auth_get_mock
 
-        self.module = self.session.setup(Parameters)
+        self.module = self.session.setup(Parameters, mock_on_start=False, mock_on_stop=False)
 
         if start:
             self.session.start_module(self.module)
