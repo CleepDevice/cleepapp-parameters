@@ -14,7 +14,7 @@ from backend.timetomessageformatter import TimeToMessageFormatter
 from backend.timetoidentifiedmessageformatter import TimeToIdentifiedMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
-from mock import patch, MagicMock, Mock, ANY
+from unittest.mock import patch, MagicMock, Mock, ANY
 from cleep.libs.tests.mockdatetime import mock_datetime
 import datetime
 import pytz
@@ -29,7 +29,7 @@ class TestsParameters(unittest.TestCase):
     def tearDown(self):
         self.session.clean()
 
-    def init_session(self, mock_sun=None,
+    def init_session(self, mock_sun=None, mock_cleepconf=None,
         mock_hostname=None, set_hostname_return_value=True, get_hostname_return_value='dummy',
         mock_tzfinder=None, tzfinder_timezoneat_side_effect=None, tzfinder_timezoneat_return_value=None, start=True):
         if mock_sun:
@@ -47,7 +47,12 @@ class TestsParameters(unittest.TestCase):
             else:
                 mock_tzfinder.return_value.timezone_at.return_value = tzfinder_timezoneat_return_value
 
-        self.module = self.session.setup(Parameters)
+        if mock_cleepconf:
+            get_auth_get_mock = Mock()
+            get_auth_get_mock.get = Mock(side_effect=[True, ['account1']])
+            mock_cleepconf.return_value.get_auth.return_value = get_auth_get_mock
+
+        self.module = self.session.setup(Parameters, mock_on_start=False, mock_on_stop=False)
 
         if start:
             self.session.start_module(self.module)
@@ -112,15 +117,20 @@ class TestsParameters(unittest.TestCase):
         self.assertFalse(mock_task.return_value.start.called)
 
     @patch('backend.parameters.Sun')
-    def test_get_module_config_default(self, mock_sun):
-        self.init_session(mock_sun=mock_sun)
+    @patch('backend.parameters.CleepConf')
+    def test_get_module_config_default(self, mock_cleepconf, mock_sun):
+        self.init_session(mock_sun=mock_sun, mock_cleepconf=mock_cleepconf)
+
         conf = self.module.get_module_config()
         logging.debug('Conf: %s' % conf)
+
         self.assertTrue('sun' in conf)
         self.assertTrue('country' in conf)
         self.assertTrue('position' in conf)
         self.assertTrue('timezone' in conf)
         self.assertTrue('hostname' in conf)
+        self.assertTrue('authenabled' in conf)
+        self.assertTrue('authaccounts' in conf)
 
         self.assertTrue('sunset_iso' in conf['sun'])
         self.assertTrue('sunset' in conf['sun'])
@@ -132,6 +142,9 @@ class TestsParameters(unittest.TestCase):
 
         self.assertTrue('latitude' in conf['position'])
         self.assertTrue('longitude' in conf['position'])
+
+        self.assertEqual(conf['authenabled'], True)
+        self.assertEqual(conf['authaccounts'], ['account1'])
 
     @patch('time.time', MagicMock(return_value=1591818206))
     def test_get_module_devices(self):

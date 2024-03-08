@@ -27,9 +27,25 @@ function(toast, parametersService, cleepService, $timeout) {
             alpha2: null
         };
         self.timezone = null;
+        self.auth = {
+            enabled: false,
+            accounts: [],
+        };
+        self.newAccount = '';
+        self.newPassword = '';
 
         /**
-         * Set hostname
+         * Init controller
+         */
+        self.$onInit = function() {
+            cleepService.getModuleConfig('parameters')
+                .then(function(config) {
+                    self.updateConfig(config, true);
+                });
+        };
+
+        /**
+         * Hostname
          */
         self.setHostname = function() {
             parametersService.setHostname(self.hostname)
@@ -43,24 +59,22 @@ function(toast, parametersService, cleepService, $timeout) {
         };
 
         /**
-         * Set position
+         * Position
          */
-        self.setPosition = function() {
+        self.setPosition = function(latitude, longitude) {
             // check values
-            if( !$scope.cleepposition || !$scope.cleepposition.lat || !$scope.cleepposition.lng ) {
+            if (!latitude || !longitude) {
                 toast.info('Please select position before setting position');
                 return;
             }
-            if( $scope.cleepposition.lat==self.position.latitude && $scope.cleepposition.lng==self.position.longitude ) {
+            if (latitude === self.position.latitude && longitude === self.position.longitude) {
                 toast.info('Position not changed');
                 return;
             }
 
             toast.loading('Setting localisation...');
-            parametersService.setPosition($scope.cleepposition.lat, $scope.cleepposition.lng)
-                .then(function(resp) {
-                    return cleepService.reloadModuleConfig('parameters');
-                })
+            parametersService.setPosition(latitude, longitude)
+                .then(() => cleepService.reloadModuleConfig('parameters'))
                 .then(function(config) {
                     self.updateConfig(config);
                     toast.success('Localisation saved');
@@ -68,39 +82,62 @@ function(toast, parametersService, cleepService, $timeout) {
         };
 
         /**
+         * Auth
+         */
+        self.setAuth = function (enabled) {
+            const call = enabled ? parametersService.enableAuth : parametersService.disableAuth;
+            call().then(() => cleepService.reloadModuleConfig('parameters'))
+                .then((config) => {
+                    self.updateConfig(config);
+                    toast.success('Secured access updated');
+                });
+        };
+
+        self.deleteAuthAccount = function(account) {
+            parametersService.deleteAuthAccount(account)
+                .then(() => cleepService.reloadModuleConfig('parameters'))
+                .then((config) => {
+                    self.updateConfig(config, true);
+                    toast.success('Account deleted');
+                });
+        };
+
+        self.addAuthAccount = function() {
+            parametersService.addAuthAccount(self.newAccount, self.newPassword)
+                .then(() => cleepService.reloadModuleConfig('parameters'))
+                .then((config) => {
+                    self.updateConfig(config, true);
+                    self.newAccount = '';
+                    self.newPassword = '';
+                    toast.success('Account created');
+                });
+        };
+
+        /**
          * Update controller config
          */
-        self.updateConfig = function(config) {
+        self.updateConfig = function(config, reloadAccounts=false) {
             self.position = config.position;
             self.hostname = config.hostname;
             self.sun = config.sun;
             self.country = config.country;
             self.timezone = config.timezone;
-        };
+            self.auth.enabled = config.authenabled;
 
-        /**
-         * Init controller
-         */
-        self.$onInit = function() {
-            cleepService.getModuleConfig('parameters')
-                .then(function(config) {
-                    self.updateConfig(config);
-
-                    // init leaflet
-                    angular.extend($scope, {
-                        cleepposition: {
-                            lat: self.position.latitude,
-                            lng: self.position.longitude,
-                            zoom: 8
-                        },
-                        cleepdefaults: {
-                            scrollWheelZoom: false,
-                            minZoom: 5,
-                            maxZoom: 12
-                        }
+            if (reloadAccounts) {
+                self.auth.accounts.splice(0, self.auth.accounts.length);
+                for (const account of config.authaccounts) {
+                    self.auth.accounts.push({
+                        icon: 'account',
+                        title: account,
+                        clicks: [
+                            { icon: 'delete', tooltip: 'Delete', click: self.deleteAuthAccount, meta: { account } },
+                        ],
                     });
-                });
+                }
+            }
         };
+
     }];
 
     return {
@@ -108,7 +145,7 @@ function(toast, parametersService, cleepService, $timeout) {
         replace: true,
         scope: true,
         controller: parametersController,
-        controllerAs: 'parametersCtl',
+        controllerAs: '$ctrl',
     };
 }]);
 

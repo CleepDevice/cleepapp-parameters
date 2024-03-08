@@ -1,12 +1,51 @@
 {
     "icon": "tune-vertical",
     "global": {
-        "js": ["clock.widget.js", "parameters.service.js"],
-        "html": ["clock.widget.html"]
+        "js": ["parameters.service.js"],
+        "html": []
     },
     "config": {
-        "js": ["parameters.config.js", "leaflet.js", "angular-simple-logger.min.js", "ui-leaflet.min.no-header.js"],
+        "js": ["parameters.config.js", "leaflet.js", "angular-simple-logger.min.js", "ui-leaflet.min.no-header.js", "config-map.component.js"],
         "css": ["leaflet.css"],
         "html": ["parameters.config.html"]
+    },
+    "widgets": {
+        "clock": {
+            "header": {
+                "icon": "clock"
+            },
+            "content": {
+                "layout": {
+                    "align": "center center"
+                },
+                "items": [
+                    {
+                        "attr": "hour",
+                        "filter": "padzero"
+                    },
+                    {
+                        "text": ":"
+                    },
+                    {
+                        "attr": "minute",
+                        "filter": "padzero"
+                    }
+                ]
+            },
+            "footer": [
+                {
+                    "icon": "weather-sunset-up",
+                    "tooltip": "Sunrise",
+                    "attr": "sunrise",
+                    "filter": "hrTime"
+                },
+                {
+                    "icon": "weather-sunset-down",
+                    "tooltip": "Sunset",
+                    "attr": "sunset",
+                    "filter": "hrTime"
+                }
+            ]
+        }
     }
 }
