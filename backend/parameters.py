@@ -143,7 +143,7 @@ class Parameters(CleepModule):
 
         # store device uuids for events
         devices = self.get_module_devices()
-        for (device_uuid, device) in devices.items():
+        for device_uuid, device in devices.items():
             if device["type"] == "clock":
                 self.__clock_uuid = device_uuid
 
@@ -817,7 +817,7 @@ class Parameters(CleepModule):
             CommandError: if error occured
         """
         accounts = self.cleep_conf.get_auth_accounts()
-        if len(accounts) == 0:
+        if not accounts:
             raise CommandError("Please add account before enabling auth")
 
         self.cleep_conf.enable_auth(True)
@@ -839,5 +839,5 @@ class Parameters(CleepModule):
             url = f"{self.rpc_url}/reloadauth"
             response = requests.post(url, verify=False)
             response.raise_for_status()
-        except:
+        except Exception:
             self.logger.exception("Unable to reload auth on RPC server")
