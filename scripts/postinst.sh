@@ -13,4 +13,4 @@ python3 -m pip install --trusted-host pypi.org "workalendar==17.0.0" "pycountry-
 
 # numpy system dependencies
 apt-get update
-apt-get install libatlas3-base -y
+apt-get install libopenblas-base libatlas3-base -y
