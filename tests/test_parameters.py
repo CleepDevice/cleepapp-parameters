@@ -19,12 +19,15 @@ from cleep.libs.tests.mockdatetime import mock_datetime
 import datetime
 import pytz
 import time
+from cleep.libs.tests.common import get_log_level
+
+LOG_LEVEL = get_log_level()
 
 class TestsParameters(unittest.TestCase):
 
     def setUp(self):
         self.session = session.TestSession(self)
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
 
     def tearDown(self):
         self.session.clean()
@@ -100,9 +103,7 @@ class TestsParameters(unittest.TestCase):
         self.session.start_module(self.module)
 
         logging.debug(self.module._get_config_field.call_args_list)
-        self.assertEqual(mock_task.call_count, 2)
-        mock_task.assert_any_call(Parameters.NTP_SYNC_INTERVAL, self.module._sync_time_task, ANY)
-        self.assertTrue(mock_task.return_value.start.called)
+        self.assertEqual(mock_task.call_count, 1)
 
     @patch('backend.parameters.time.time', Mock(return_value=1607538850))
     @patch('backend.parameters.Task')
@@ -218,25 +219,6 @@ class TestsParameters(unittest.TestCase):
             self.assertEqual(devices[uid]['weekday'], 6)
             self.assertEqual(devices[uid]['weekday_literal'], 'sunday')
 
-    @patch('backend.parameters.Parameters.sync_time')
-    def test_sync_time_task_sync_ok(self, sync_time_mock):
-        self.init_session()
-        sync_time_mock.return_value = True
-        self.module.sync_time_task = Mock()
-
-        self.module._sync_time_task()
-        
-        self.assertIsNone(self.module.sync_time_task)
-
-    def test_sync_time_task_sync_ko(self):
-        self.init_session()
-        self.module.sync_time = Mock(return_value=False)
-        self.module.sync_time_task = Mock()
-
-        self.module._sync_time_task()
-        
-        self.assertFalse(self.module.sync_time_task.stop.called)
-
     def test_time_task_now_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
         with mock_datetime(utc_now, datetime):
@@ -288,6 +270,26 @@ class TestsParameters(unittest.TestCase):
             self.module._time_task()
 
             self.assertTrue(self.module.set_sun.called)
+
+    def test_get_time(self):
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        with mock_datetime(utc_now, datetime):
+            self.init_session()
+
+            the_time = self.module.get_time()
+            logging.debug('The time: %s', the_time)
+
+            self.assertEqual(the_time, {
+                'timestamp': 1591645808.0,
+                'iso': '2020-06-08T20:50:08+01:00',
+                'year': 2020,
+                'month': 6,
+                'day': 8,
+                'hour': 20,
+                'minute': 50,
+                'weekday': 0,
+                'weekday_literal': 'monday'
+            })
 
     @patch('cleep.libs.configs.hostname.Hostname')
     def test_set_hostname_succeed(self, mock_hostname):
@@ -499,14 +501,6 @@ class TestsParameters(unittest.TestCase):
         self.assertTrue(self.module.set_timezone())
         mock_tzfinder.return_value.closest_timezone_at.assert_called_with(lat=52.204, lng=0.1208)
 
-    @patch('backend.parameters.Console')
-    def test_sync_time(self, mock_console):
-        self.init_session()
-
-        self.module.sync_time()
-
-        mock_console.return_value.command.assert_called_with('/usr/sbin/ntpdate-debian', timeout=60.0)
-
     def test_get_non_working_days(self):
         self.init_session()
 
@@ -558,7 +552,7 @@ class TestsParameters(unittest.TestCase):
 class TestsParametersCountryUpdateEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         params = { 
             'internal_bus': Mock(),
             'formatters_broker': Mock(),
@@ -576,7 +570,7 @@ class TestsParametersCountryUpdateEvent(unittest.TestCase):
 class TestsParametersHostnameUpdateEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         params = { 
             'internal_bus': Mock(),
             'formatters_broker': Mock(),
@@ -594,7 +588,7 @@ class TestsParametersHostnameUpdateEvent(unittest.TestCase):
 class TestsParametersTimeNowEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         params = { 
             'internal_bus': Mock(),
             'formatters_broker': Mock(),
@@ -612,7 +606,7 @@ class TestsParametersTimeNowEvent(unittest.TestCase):
 class TestsParametersTimeSunriseEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         params = { 
             'internal_bus': Mock(),
             'formatters_broker': Mock(),
@@ -630,7 +624,7 @@ class TestsParametersTimeSunriseEvent(unittest.TestCase):
 class TestsParametersTimeSunsetEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         params = { 
             'internal_bus': Mock(),
             'formatters_broker': Mock(),
@@ -648,7 +642,7 @@ class TestsParametersTimeSunsetEvent(unittest.TestCase):
 class TestsTimeToMessageFormatter(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         events_broker = Mock()
         self.formatter = TimeToMessageFormatter({'events_broker': events_broker})
 
@@ -676,7 +670,7 @@ class TestsTimeToMessageFormatter(unittest.TestCase):
 class TestsTimeToIdentifiedMessageFormatter(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
         events_broker = Mock()
         self.formatter = TimeToIdentifiedMessageFormatter({'events_broker': events_broker})
 

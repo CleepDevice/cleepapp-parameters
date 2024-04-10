@@ -79,7 +79,7 @@ class Parameters(CleepModule):
     SYSTEM_ZONEINFO_DIR = "/usr/share/zoneinfo/"
     SYSTEM_LOCALTIME = "/etc/localtime"
     SYSTEM_TIMEZONE = "/etc/timezone"
-    NTP_SYNC_INTERVAL = 60
+    SET_DATE_CMD = "date +%s -s @%(timestamp)s"
 
     def __init__(self, bootstrap, debug_enabled):
         """
@@ -102,7 +102,6 @@ class Parameters(CleepModule):
         self.timezone_name = None
         self.timezone = None
         self.time_task = None
-        self.sync_time_task = None
         self.__clock_uuid = None
         self.cleep_conf = CleepConf(self.cleep_filesystem)
         # code from https://stackoverflow.com/a/106223
@@ -154,15 +153,13 @@ class Parameters(CleepModule):
         # restore last saved timestamp if system time seems very old (NTP error)
         saved_timestamp = self._get_config_field("timestamp")
         if (int(time.time()) - saved_timestamp) < 0:
-            # it seems NTP sync failed, launch timer to regularly try to sync device time
+            # it seems NTP sync failed, configure system with lastest stored time
             self.logger.info(
-                "Device time seems to be invalid (%s), launch synchronization time task",
+                "Device time seems to be invalid (%s), Set system time with latest known time (%s)",
                 datetime.datetime.utcnow().isoformat(),
+                datetime.datetime.fromtimestamp(saved_timestamp).isoformat(),
             )
-            self.sync_time_task = Task(
-                Parameters.NTP_SYNC_INTERVAL, self._sync_time_task, self.logger
-            )
-            self.sync_time_task.start()
+            self._set_system_time(saved_timestamp)
 
         # launch time task (synced to current seconds)
         self.time_task = Task(60.0, self._time_task, self.logger)
@@ -271,20 +268,19 @@ class Parameters(CleepModule):
             "weekday_literal": weekday_literal,
         }
 
-    def _sync_time_task(self):
+    def _set_system_time(self, timestamp):
         """
-        Sync time task. It is used to try to sync device time using NTP server.
+        Set system time with specified value
 
-        Note:
-            This task is launched only if device time is insane.
+        Args:
+            timestamp (float): timestamp to apply
         """
-        if Parameters.sync_time():
-            self.logger.info(
-                "Time synchronized with NTP server (%s)",
-                datetime.datetime.utcnow().isoformat(),
-            )
-            self.sync_time_task.stop()
-            self.sync_time_task = None
+        console = Console()
+        cmd = self.SET_DATE_CMD % { "timestamp": int(timestamp) }
+        resp = console.command(cmd, timeout=10.0)
+
+        if resp["returncode"] != 0 or resp["killed"]:
+            self.logger.warning("Error configuring system time")
 
     def _time_task(self):
         """
@@ -320,9 +316,7 @@ class Parameters(CleepModule):
         if now_formatted["hour"] == 0 and now_formatted["minute"] == 5:
             self.set_sun()
 
-        # save last timestamp in config to restore it after a reboot and NTP sync failed (no internet)
-        if not self.sync_time_task:
-            self._set_config_field("timestamp", now_formatted["timestamp"])
+        self._set_config_field("timestamp", now_formatted["timestamp"])
 
     def get_time(self):
         """
@@ -623,22 +617,6 @@ class Parameters(CleepModule):
             string: current timezone name
         """
         return self._get_config_field("timezone")
-
-    @staticmethod
-    def sync_time():
-        """
-        Synchronize device time using NTP server
-
-        Note:
-            This command may lasts some seconds
-
-        Returns:
-            bool: True if NTP sync succeed, False otherwise
-        """
-        console = Console()
-        resp = console.command("/usr/sbin/ntpdate-debian", timeout=60.0)
-
-        return resp["returncode"] == 0
 
     def get_non_working_days(self, year=None):
         """
