@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import os
 import time
 import copy
 import importlib
 import re
 import datetime
-from threading import Timer
 import requests
 import reverse_geocode
 from timezonefinder import TimezoneFinder
@@ -22,7 +20,6 @@ from cleep.exception import CommandError, InvalidParameter, MissingParameter
 from cleep.libs.configs.hostname import Hostname
 from cleep.libs.internals.sun import Sun
 from cleep.libs.internals.console import Console
-from cleep.libs.internals.task import Task
 from cleep.libs.configs.cleepconf import CleepConf
 
 __all__ = ["Parameters"]
@@ -162,12 +159,12 @@ class Parameters(CleepModule):
             self._set_system_time(saved_timestamp)
 
         # launch time task (synced to current seconds)
-        self.time_task = Task(60.0, self._time_task, self.logger)
+        self.time_task = self.task_factory.create_task(60.0, self._time_task)
         seconds = 60 - (int(time.time()) % 60)
         if seconds == 60:
             self.time_task.start()
         else:
-            timer = Timer(seconds, self.time_task.start)
+            timer = self.task_factory.create_timer(seconds, self.time_task.start)
             timer.start()
 
     def _on_stop(self):
@@ -706,7 +703,7 @@ class Parameters(CleepModule):
         today = datetime.date.today()
         return self.is_non_working_day(today.isoformat())
 
-    def get_auth_account(self):
+    def get_auth_accounts(self):
         """
         Return auth accounts
 
@@ -805,7 +802,7 @@ class Parameters(CleepModule):
         """
         Disable auth
         """
-        self.cleep_conf.enable_auth(enable=False)
+        self.cleep_conf.enable_auth(False)
         self.__reload_rpcserver_auth()
 
     def __reload_rpcserver_auth(self):

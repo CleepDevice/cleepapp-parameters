@@ -8,10 +8,6 @@ angular
 function($rootScope, rpcService, cleepService) {
     var self = this;
 
-    self.test = function() {
-        console.log('***************');
-    };
-    
     /**
      * Get sunset/sunrise
      */

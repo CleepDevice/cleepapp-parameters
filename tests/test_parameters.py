@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from cleep.libs.tests import session
 import unittest
 import logging
 import sys
@@ -13,7 +14,6 @@ from backend.parameterstimesunsetevent import ParametersTimeSunsetEvent
 from backend.timetomessageformatter import TimeToMessageFormatter
 from backend.timetoidentifiedmessageformatter import TimeToIdentifiedMessageFormatter
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
-from cleep.libs.tests import session
 from unittest.mock import patch, MagicMock, Mock, ANY
 from cleep.libs.tests.mockdatetime import mock_datetime
 import datetime
@@ -78,44 +78,64 @@ class TestsParameters(unittest.TestCase):
         self.module.set_sun.assert_called()
 
     @patch('backend.parameters.time.time', Mock(return_value=1607538850))
-    @patch('backend.parameters.Timer')
-    @patch('backend.parameters.Task')
-    def test_on_start_launch_time_task(self, mock_task, mock_timer):
-        self.init_session()
+    def test_on_start_launch_time_task_with_sync_timer(self):
+        self.init_session(start=False)
+        mock_timer = Mock()
+        self.session.task_factory.create_timer = Mock(return_value=mock_timer)
+        mock_task = Mock()
+        self.session.task_factory.create_task = Mock(return_value=mock_task)
+
+        self.module._on_start()
 
         # mocked time = 9/12/2020 à 18:34:10, so cleep seconds synchronized with system, it must delay of 50 seconds
-        mock_timer.assert_called_with(50, mock_task.return_value.start)
-        self.assertTrue(mock_timer.return_value.start.called)
+        self.session.task_factory.create_timer.assert_called_with(50, mock_task.start)
+        mock_timer.start.assert_called()
 
-    @patch('backend.parameters.time.time', Mock(return_value=1607538850))
-    @patch('backend.parameters.Task')
-    def test_on_start_sync_time_first_launch(self, mock_task):
-        self.init_session()
+    #@patch('backend.parameters.time.time', Mock(return_value=1607538850))
+    #def test_on_start_sync_time_first_launch(self):
+    #    self.init_session(start=False)
+    #    mock_task = Mock()
+    #    self.session.task_factory.create_task = Mock(return_value=mock_task)
+    
+    #    self.module._on_start()
 
-        self.assertEqual(mock_task.call_count, 1)
+    #    self.session.task_factory.create_task.assert_called()
 
-    @patch('backend.parameters.time.time', Mock(return_value=1575916450))
-    @patch('backend.parameters.Task')
-    def test_on_start_sync_time_already_launched_invalid_time(self, mock_task):
+    #@patch('backend.parameters.time.time', Mock(return_value=1575916450))
+    #def test_on_start_sync_time_with_sync_timer(self):
+    #    self.init_session(start=False)
+    #    self.module._get_config_field = Mock(side_effect=[{}, {}, 'france', 'Europe/Paris', {'latitude': 52.2040, 'longitude': 0.1208}, 1607538850])
+    #    mock_task = Mock()
+    #    self.session.task_factory.create_task = Mock(return_value=mock_task)
+
+    #    self.session.start_module(self.module)
+    #    logging.debug(self.module._get_config_field.call_args_list)
+        
+    #    self.assertEqual(mock_task.call_count, 1)
+
+    @patch('backend.parameters.time.time', Mock(return_value=1607538840))
+    def test_on_start_launch_time_task_without_sync_timer(self):
         self.init_session(start=False)
-        self.module._get_config_field = Mock(side_effect=[{}, {}, 'france', 'Europe/Paris', {'latitude': 52.2040, 'longitude': 0.1208}, 1607538850])
+        self.module._get_config_field = Mock(side_effect=[1607538150])
+        mock_timer = Mock()
+        self.session.task_factory.create_timer = Mock(return_value=mock_timer)
+        mock_task = Mock()
+        self.session.task_factory.create_task = Mock(return_value=mock_task)
 
-        self.session.start_module(self.module)
+        self.module._on_start()
 
-        logging.debug(self.module._get_config_field.call_args_list)
-        self.assertEqual(mock_task.call_count, 1)
+        self.session.task_factory.create_timer.assert_not_called()
+        mock_task.start.assert_called()
 
-    @patch('backend.parameters.time.time', Mock(return_value=1607538850))
-    @patch('backend.parameters.Task')
-    def test_on_start_sync_time_already_launched_valid_time(self, mock_task):
+    @patch('backend.parameters.time.time', Mock(return_value=1607538840))
+    def test_on_start_restore_saved_time(self):
         self.init_session(start=False)
-        self.module._get_config_field = Mock(side_effect=[{}, {}, 'france', 'Europe/Paris', {'latitude': 52.2040, 'longitude': 0.1208}, 1607538150])
+        self.module._get_config_field = Mock(side_effect=[1607539150])
+        self.module._set_system_time = Mock()
 
-        self.session.start_module(self.module)
+        self.module._on_start()
 
-        logging.debug(mock_task.call_args_list)
-        self.assertEqual(mock_task.call_count, 1)
-        self.assertFalse(mock_task.return_value.start.called)
+        self.module._set_system_time.assert_called_with(1607539150)
 
     @patch('backend.parameters.Sun')
     @patch('backend.parameters.CleepConf')
@@ -218,6 +238,45 @@ class TestsParameters(unittest.TestCase):
             devices = self.module.get_module_devices()
             self.assertEqual(devices[uid]['weekday'], 6)
             self.assertEqual(devices[uid]['weekday_literal'], 'sunday')
+
+    @patch('backend.parameters.Console')
+    def test_set_system_time_success(self, mock_console):
+        self.init_session()
+        command_mock = Mock(return_value={'returncode': 0, 'killed': False})
+        mock_console.return_value.command = command_mock
+        self.module.logger = Mock()
+
+        self.module._set_system_time(1591645808)
+
+        cmd = "date +{'timestamp': %s} -s @%s" % (1591645808, 1591645808)
+        command_mock.assert_called_with(cmd, timeout=10.0)
+        self.module.logger.warn.assert_not_called()
+
+    @patch('backend.parameters.Console')
+    def test_set_system_time_failure(self, mock_console):
+        self.init_session()
+        command_mock = Mock(return_value={'returncode': 1, 'killed': False})
+        mock_console.return_value.command = command_mock
+        self.module.logger.warning = Mock()
+
+        self.module._set_system_time(1591645808)
+
+        cmd = "date +{'timestamp': %s} -s @%s" % (1591645808, 1591645808)
+        command_mock.assert_called_with(cmd, timeout=10.0)
+        self.module.logger.warning.assert_called()
+
+    @patch('backend.parameters.Console')
+    def test_set_system_time_killed(self, mock_console):
+        self.init_session()
+        command_mock = Mock(return_value={'returncode': 0, 'killed': True})
+        mock_console.return_value.command = command_mock
+        self.module.logger.warning = Mock()
+
+        self.module._set_system_time(1591645808)
+
+        cmd = "date +{'timestamp': %s} -s @%s" % (1591645808, 1591645808)
+        command_mock.assert_called_with(cmd, timeout=10.0)
+        self.module.logger.warning.assert_called()
 
     def test_time_task_now_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
@@ -545,6 +604,107 @@ class TestsParameters(unittest.TestCase):
             self.assertTrue(self.module.is_today_non_working_day())
             self.module.is_non_working_day.assert_called_with('2021-01-01')
 
+    @patch('backend.parameters.CleepConf')
+    def test_get_auth_accounts(self, mock_cleepconf):
+        accounts = ['account1', 'account2']
+        mock_cleepconf.return_value.get_auth_accounts.return_value = accounts
+        self.init_session()
+
+        result = self.module.get_auth_accounts()
+
+        self.assertListEqual(result, accounts)
+
+    @patch('backend.parameters.CleepConf')
+    def test_add_auth_account(self, mock_cleepconf):
+        account = 'account'
+        password = 'password'
+        self.init_session()
+        self.module._Parameters__reload_rpcserver_auth = Mock()
+
+        result = self.module.add_auth_account(account, password)
+
+        mock_cleepconf.return_value.add_auth_account.assert_called_with(account, password)
+        self.module._Parameters__reload_rpcserver_auth.assert_called()
+
+    @patch('backend.parameters.CleepConf')
+    def test_add_auth_account_invalid_parameters(self, mock_cleepconf):
+        self.init_session()
+
+        with self.assertRaises(InvalidParameter) as cm:
+            self.module.add_auth_account(123, 'password')
+        self.assertEqual(str(cm.exception), 'Parameter "account" must be of type "str"')
+
+        with self.assertRaises(InvalidParameter) as cm:
+            self.module.add_auth_account('account', 123)
+        self.assertEqual(str(cm.exception), 'Parameter "password" must be of type "str"')
+
+    @patch('backend.parameters.CleepConf')
+    def test_add_auth_account_failure(self, mock_cleepconf):
+        mock_cleepconf.return_value.add_auth_account = Mock(side_effect=Exception('Test error'))
+        self.init_session()
+
+        with self.assertRaises(CommandError) as cm:
+            self.module.add_auth_account('account', 'password')
+        self.assertEqual(str(cm.exception), 'Test error')
+
+    @patch('backend.parameters.CleepConf')
+    def test_delete_auth_account(self, mock_cleepconf):
+        account = 'account'
+        self.init_session()
+        self.module._Parameters__reload_rpcserver_auth = Mock()
+
+        result = self.module.delete_auth_account(account)
+
+        mock_cleepconf.return_value.delete_auth_account.assert_called_with(account)
+        self.module._Parameters__reload_rpcserver_auth.assert_called()
+
+    @patch('backend.parameters.CleepConf')
+    def test_delete_auth_account_invalid_parameters(self, mock_cleepconf):
+        self.init_session()
+
+        with self.assertRaises(InvalidParameter) as cm:
+            self.module.delete_auth_account(123)
+        self.assertEqual(str(cm.exception), 'Parameter "account" must be of type "str"')
+
+    @patch('backend.parameters.CleepConf')
+    def test_delete_auth_account_failure(self, mock_cleepconf):
+        mock_cleepconf.return_value.delete_auth_account = Mock(side_effect=Exception('Test error'))
+        self.init_session()
+
+        with self.assertRaises(CommandError) as cm:
+            self.module.delete_auth_account('account')
+        self.assertEqual(str(cm.exception), 'Test error')
+
+    @patch('backend.parameters.CleepConf')
+    def test_enable_auth(self, mock_cleepconf):
+        self.init_session()
+        self.module._Parameters__reload_rpcserver_auth = Mock()
+        mock_cleepconf.return_value.get_auth_accounts.return_value = ['accnunt']
+
+        result = self.module.enable_auth()
+
+        mock_cleepconf.return_value.enable_auth.assert_called_with(True)
+        self.module._Parameters__reload_rpcserver_auth.assert_called()
+
+    @patch('backend.parameters.CleepConf')
+    def test_enable_auth_no_account_failure(self, mock_cleepconf):
+        self.init_session()
+        self.module._Parameters__reload_rpcserver_auth = Mock()
+        mock_cleepconf.return_value.get_auth_accounts.return_value = []
+
+        with self.assertRaises(CommandError) as cm:
+            result = self.module.enable_auth()
+        self.assertEqual(str(cm.exception), 'Please add account before enabling auth')
+
+    @patch('backend.parameters.CleepConf')
+    def test_disable_auth(self, mock_cleepconf):
+        self.init_session()
+        self.module._Parameters__reload_rpcserver_auth = Mock()
+
+        result = self.module.disable_auth()
+
+        mock_cleepconf.return_value.enable_auth.assert_called_with(False)
+        self.module._Parameters__reload_rpcserver_auth.assert_called()
 
 
 
@@ -697,6 +857,6 @@ class TestsTimeToIdentifiedMessageFormatter(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_parameters.py; coverage report -m -i
+    # coverage run --include="**/backend/**/*.py" --concurrency=thread test_parameters.py; coverage report -m -i
     unittest.main()
     
