@@ -807,7 +807,7 @@ class Parameters(CleepModule):
         """
         Reload RPC server auth configuration
         """
-        self.logger.debug("Rpc url=", self.rpc_url)
+        self.logger.debug("Rpc url=%s", self.rpc_url)
         try:
             url = f"{self.rpc_url}/reloadauth"
             response = requests.post(url, verify=False)
