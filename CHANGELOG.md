@@ -1,11 +1,15 @@
 # Changelog
 
-## [UNRELEASED]
+## [2.3.0] - 2024-09-30
 ### Added
 - Handle secured access (aka auth)
 
+### Changed
+- Use TaskFactory
+
 ### Fixed
 - Fix documentation
+- Fix numpy install
 
 ### Updated
 - Use cleep config components
