@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.1] - 2024-11-08
+
+### Fixed
+
+- Install system dependencies in Cleep
+
 ## [2.3.0] - 2024-09-30
 ### Added
 - Handle secured access (aka auth)

@@ -10,8 +10,8 @@ trap 'echo "\"${last_command}\" command failed with exit code $?."' ERR
 # ntp installs auto time sync service
 # ntpdate install binary to sync time manually
 # libopenblas, libatlas are for numpy
-apt-get update
-apt-get install libopenblas-base libatlas3-base ntp ntpdate -y
+# => installed with Cleep
+# apt-get install libopenblas-base libatlas3-base ntp ntpdate -y
 
 # reverse-geocode has numpy dependency without version specified. Latest numpy (today 1.26) is not compatible with python3.9
 # so we need to force numpy version according to this numpy compatibility matrix  https://numpy.org/neps/nep-0029-deprecation_policy.html
