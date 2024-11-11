@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.2] - 2024-11-11
+
+### Fixed
+- Install newer numpy version v1.26.4
+- Install newer scipy version v1.13.1
+
 ## [2.3.1] - 2024-11-08
 
 ### Fixed
