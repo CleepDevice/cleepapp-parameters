@@ -56,6 +56,9 @@ class TestsParameters(unittest.TestCase):
             mock_cleepconf.return_value.get_auth.return_value = get_auth_get_mock
 
         self.module = self.session.setup(Parameters, mock_on_start=False, mock_on_stop=False)
+        self.session.add_mock_command(
+            self.session.make_mock_command('set_auth_enabled')
+        )
 
         if start:
             self.session.start_module(self.module)
@@ -620,11 +623,13 @@ class TestsParameters(unittest.TestCase):
         password = 'password'
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
+        self.module._Parameters__publish_auth_status = Mock()
 
         result = self.module.add_auth_account(account, password)
 
         mock_cleepconf.return_value.add_auth_account.assert_called_with(account, password)
         self.module._Parameters__reload_rpcserver_auth.assert_called()
+        self.module._Parameters__publish_auth_status.assert_called()
 
     @patch('backend.parameters.CleepConf')
     def test_add_auth_account_invalid_parameters(self, mock_cleepconf):
@@ -652,11 +657,13 @@ class TestsParameters(unittest.TestCase):
         account = 'account'
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
+        self.module._Parameters__publish_auth_status = Mock()
 
         result = self.module.delete_auth_account(account)
 
         mock_cleepconf.return_value.delete_auth_account.assert_called_with(account)
         self.module._Parameters__reload_rpcserver_auth.assert_called()
+        self.module._Parameters__publish_auth_status.assert_called()
 
     @patch('backend.parameters.CleepConf')
     def test_delete_auth_account_invalid_parameters(self, mock_cleepconf):
@@ -679,12 +686,14 @@ class TestsParameters(unittest.TestCase):
     def test_enable_auth(self, mock_cleepconf):
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
+        self.module._Parameters__publish_auth_status = Mock()
         mock_cleepconf.return_value.get_auth_accounts.return_value = ['accnunt']
 
         result = self.module.enable_auth()
 
         mock_cleepconf.return_value.enable_auth.assert_called_with(True)
         self.module._Parameters__reload_rpcserver_auth.assert_called()
+        self.module._Parameters__publish_auth_status.assert_called()
 
     @patch('backend.parameters.CleepConf')
     def test_enable_auth_no_account_failure(self, mock_cleepconf):
@@ -700,11 +709,67 @@ class TestsParameters(unittest.TestCase):
     def test_disable_auth(self, mock_cleepconf):
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
+        self.module._Parameters__publish_auth_status = Mock()
 
         result = self.module.disable_auth()
 
         mock_cleepconf.return_value.enable_auth.assert_called_with(False)
         self.module._Parameters__reload_rpcserver_auth.assert_called()
+        self.module._Parameters__publish_auth_status.assert_called()
+
+    @patch('backend.parameters.CleepConf')
+    def test_publish_auth_status(self, mock_cleepconf):
+        self.init_session()
+        mock_cleepconf.return_value.is_auth_enabled.return_value = True
+        mock_cleepconf.return_value.get_auth_accounts.return_value = ['account']
+
+        self.module._Parameters__publish_auth_status()
+
+        self.session.assert_command_called_with(
+            'set_auth_enabled', {'enabled': True}, 'inventory'
+        )
+
+    @patch('backend.parameters.CleepConf')
+    def test_publish_auth_status_disabled_without_accounts(self, mock_cleepconf):
+        self.init_session()
+        mock_cleepconf.return_value.is_auth_enabled.return_value = True
+        mock_cleepconf.return_value.get_auth_accounts.return_value = []
+
+        self.module._Parameters__publish_auth_status()
+
+        self.session.assert_command_called_with(
+            'set_auth_enabled', {'enabled': False}, 'inventory'
+        )
+
+    @patch('backend.parameters.CleepConf')
+    def test_on_start_publishes_auth_status(self, mock_cleepconf):
+        self.init_session(start=False)
+        self.module._Parameters__publish_auth_status_with_retry = Mock()
+        mock_timer = Mock()
+        self.session.task_factory.create_timer = Mock(return_value=mock_timer)
+        mock_task = Mock()
+        self.session.task_factory.create_task = Mock(return_value=mock_task)
+
+        self.module._on_start()
+
+        self.session.task_factory.create_task.assert_any_call(
+            None, self.module._Parameters__publish_auth_status_with_retry
+        )
+
+    @patch('backend.parameters.CleepConf')
+    def test_publish_auth_status_with_retry_succeeds(self, mock_cleepconf):
+        self.init_session(start=False)
+        self.module._Parameters__publish_auth_status = Mock(
+            side_effect=[False, True]
+        )
+
+        with patch('gevent.sleep') as mock_sleep:
+            self.module._Parameters__publish_auth_status_with_retry(
+                attempts=3, delay=0.01
+            )
+
+        self.assertEqual(self.module._Parameters__publish_auth_status.call_count, 2)
+        mock_sleep.assert_called_once_with(0.01)
 
 
 

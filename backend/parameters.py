@@ -42,7 +42,7 @@ class Parameters(CleepModule):
     """
 
     MODULE_AUTHOR = "Cleep"
-    MODULE_VERSION = "2.3.2"
+    MODULE_VERSION = "2.4.1"
     MODULE_CATEGORY = "APPLICATION"
     MODULE_DEPS = []
     MODULE_DESCRIPTION = "Configure generic parameters of your device"
@@ -167,6 +167,12 @@ class Parameters(CleepModule):
             timer = self.task_factory.create_timer(seconds, self.time_task.start)
             timer.start()
 
+        # Defer auth publish so inventory message loop / app_configured are ready
+        auth_task = self.task_factory.create_task(
+            None, self.__publish_auth_status_with_retry
+        )
+        auth_task.start()
+
     def _on_stop(self):
         """
         Module stops
@@ -273,7 +279,7 @@ class Parameters(CleepModule):
             timestamp (float): timestamp to apply
         """
         console = Console()
-        cmd = self.SET_DATE_CMD % { "timestamp": int(timestamp) }
+        cmd = self.SET_DATE_CMD % {"timestamp": int(timestamp)}
         resp = console.command(cmd, timeout=10.0)
 
         if resp["returncode"] != 0 or resp["killed"]:
@@ -751,6 +757,7 @@ class Parameters(CleepModule):
         try:
             self.cleep_conf.add_auth_account(account, password)
             self.__reload_rpcserver_auth()
+            self.__publish_auth_status()
         except Exception as error:
             raise CommandError(str(error))
 
@@ -779,6 +786,7 @@ class Parameters(CleepModule):
         try:
             self.cleep_conf.delete_auth_account(account)
             self.__reload_rpcserver_auth()
+            self.__publish_auth_status()
         except Exception as error:
             raise CommandError(str(error))
 
@@ -795,6 +803,7 @@ class Parameters(CleepModule):
 
         self.cleep_conf.enable_auth(True)
         self.__reload_rpcserver_auth()
+        self.__publish_auth_status()
 
     def disable_auth(self):
         """
@@ -802,6 +811,52 @@ class Parameters(CleepModule):
         """
         self.cleep_conf.enable_auth(False)
         self.__reload_rpcserver_auth()
+        self.__publish_auth_status()
+
+    def __is_auth_effectively_enabled(self):
+        """
+        Same rule as the RPC server: flag on and at least one account.
+        """
+        return bool(
+            self.cleep_conf.is_auth_enabled() and self.cleep_conf.get_auth_accounts()
+        )
+
+    def __publish_auth_status(self, quiet=False):
+        """
+        Push current auth state to inventory so cleepbus can advertise it.
+
+        Args:
+            quiet (bool): if True, log failures at debug (used while retrying)
+
+        Returns:
+            bool: True when inventory accepted the update
+        """
+        enabled = self.__is_auth_effectively_enabled()
+        resp = self.send_command("set_auth_enabled", "inventory", {"enabled": enabled})
+        if resp and resp.error:
+            if quiet:
+                self.logger.debug(
+                    "Unable to publish auth status to inventory: %s", resp.message
+                )
+            else:
+                self.logger.error(
+                    "Unable to publish auth status to inventory: %s", resp.message
+                )
+            return False
+        return True
+
+    def __publish_auth_status_with_retry(self, attempts=5, delay=0.5):
+        """
+        Retry auth publish briefly after boot (avoids NoResponse to inventory).
+        """
+        from gevent import sleep as gevent_sleep
+
+        for attempt in range(attempts):
+            quiet = attempt + 1 < attempts
+            if self.__publish_auth_status(quiet=quiet):
+                return
+            if quiet:
+                gevent_sleep(delay)
 
     def __reload_rpcserver_auth(self):
         """

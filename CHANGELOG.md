@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.1] - 2026-10-19
+
+### Added
+
+- Publish effective auth status to inventory so cleepbus can advertise it to peers
+
+### Fixed
+
+- Map tiles fill the panel again when Localisation is opened from config-tabs (Leaflet `invalidateSize`)
+
 ## [2.4.0] - 2026-10-16
 
 ### Updated

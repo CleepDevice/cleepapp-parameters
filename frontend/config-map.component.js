@@ -13,15 +13,15 @@ angular.module('Cleep').component('configMap', {
                 </config-item-save-button>
             </div>
             <div flex>
-                <leaflet center="$ctrl.position" defaults="$ctrl.defaults" height="{{ $ctrl.width }}"></leaflet>
+                <leaflet center="$ctrl.position" defaults="$ctrl.defaults" height="{{ $ctrl.height }}"></leaflet>
             </div>
         </div>
     `,
     bindings: {
-        clId: '@', 
+        clId: '@',
         clTitle: '@',
-        clIcon: '@', 
-        clIconClass: '@', 
+        clIcon: '@',
+        clIconClass: '@',
         clBtnColor: '@',
         clBtnStyle: '@',
         clBtnIcon: '@',
@@ -34,8 +34,8 @@ angular.module('Cleep').component('configMap', {
         clMapHeight: '@?',
         clMapWidth: '@?',
         clClick: '&?',
-    },   
-    controller: function ($scope) { 
+    },
+    controller: ['$scope', '$timeout', 'leafletData', function ($scope, $timeout, leafletData) {
         const ctrl = this;
         ctrl.position = {
             lat: 0,
@@ -48,9 +48,18 @@ angular.module('Cleep').component('configMap', {
             maxZoom: 12,
         };
 
-        ctrl.$onInit = function() {
-            ctrl.width = (ctrl.clMapWidth ?? '400') + 'px';
-            ctrl.height = ctrl.clMapHeight;
+        ctrl.invalidateMap = function () {
+            $timeout(function () {
+                leafletData.getMap().then(function (map) {
+                    map.invalidateSize(false);
+                }).catch(angular.noop);
+            }, 0);
+        };
+
+        ctrl.$onInit = function () {
+            ctrl.height = (ctrl.clMapHeight || ctrl.clMapWidth || '400') + 'px';
+            // Tab panels may still be laying out on first paint
+            ctrl.invalidateMap();
         };
 
         ctrl.$onChanges = function (changes) {
@@ -65,6 +74,12 @@ angular.module('Cleep').component('configMap', {
             }
         };
 
+        // config-tabs keeps inactive panels in the DOM (hidden). Leaflet must
+        // recalculate when the panel that contains this map becomes visible.
+        $scope.$on('config-tabs:shown', function () {
+            ctrl.invalidateMap();
+        });
+
         ctrl.onClick = function () {
             const data = {
                 latitude: ctrl.position.lat,
@@ -72,5 +87,5 @@ angular.module('Cleep').component('configMap', {
             };
             (ctrl.clClick || angular.noop)(data);
         };
-    },
+    }],
 });
