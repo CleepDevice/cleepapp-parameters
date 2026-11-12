@@ -1,20 +1,21 @@
 # Changelog
 
-## [2.4.1] - 2026-10-19
+## [Unreleased]
+
+### Changed
+
+- Replace `postinst.sh` with declarative `scripts/postinst.json`
+- Migrate tests to fit core changes
+- Use config-tabs from Cleep design system
 
 ### Added
 
+- Emit propagated `parameters.auth.update` when HTTP auth is enabled/disabled so peers refresh the lock icon without reconnecting
 - Publish effective auth status to inventory so cleepbus can advertise it to peers
 
 ### Fixed
 
 - Map tiles fill the panel again when Localisation is opened from config-tabs (Leaflet `invalidateSize`)
-
-## [2.4.0] - 2026-10-16
-
-### Updated
-
-- Use config-tabs from Cleep design system
 
 ## [2.3.2] - 2024-11-11
 
