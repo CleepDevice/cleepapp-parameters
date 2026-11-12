@@ -6,6 +6,7 @@ import logging
 from backend.parameters import Parameters
 from backend.parameterscountryupdateevent import ParametersCountryUpdateEvent
 from backend.parametershostnameupdateevent import ParametersHostnameUpdateEvent
+from backend.parametersauthupdateevent import ParametersAuthUpdateEvent
 from backend.parameterstimenowevent import ParametersTimeNowEvent
 from backend.parameterstimesunriseevent import ParametersTimeSunriseEvent
 from backend.parameterstimesunsetevent import ParametersTimeSunsetEvent
@@ -726,6 +727,9 @@ class TestsParameters(unittest.TestCase):
         self.session.assert_command_called_with(
             'set_auth_enabled', {'enabled': True}, 'inventory'
         )
+        self.assertTrue(self.session.event_called_with('parameters.auth.update', {
+            'enabled': True,
+        }))
 
     @patch('backend.parameters.CleepConf')
     def test_publish_auth_status_disabled_without_accounts(self, mock_cleepconf):

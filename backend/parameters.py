@@ -113,6 +113,7 @@ class Parameters(CleepModule):
         self.time_sunrise_event = self._get_event("parameters.time.sunrise")
         self.time_sunset_event = self._get_event("parameters.time.sunset")
         self.hostname_update_event = self._get_event("parameters.hostname.update")
+        self.auth_update_event = self._get_event("parameters.auth.update")
         self.country_update_event = self._get_event("parameters.country.update")
 
     def _configure(self):
@@ -823,7 +824,8 @@ class Parameters(CleepModule):
 
     def __publish_auth_status(self, quiet=False):
         """
-        Push current auth state to inventory so cleepbus can advertise it.
+        Push current auth state to inventory so cleepbus can advertise it,
+        then emit ``parameters.auth.update`` for live peer refresh.
 
         Args:
             quiet (bool): if True, log failures at debug (used while retrying)
@@ -843,6 +845,12 @@ class Parameters(CleepModule):
                     "Unable to publish auth status to inventory: %s", resp.message
                 )
             return False
+
+        try:
+            self.auth_update_event.send(params={"enabled": enabled})
+        except Exception:
+            # Inventory already updated; peers may refresh on next header poll.
+            self.logger.exception("Unable to send parameters.auth.update event")
         return True
 
     def __publish_auth_status_with_retry(self, attempts=5, delay=0.5):
