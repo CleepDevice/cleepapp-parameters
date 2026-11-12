@@ -1,8 +1,8 @@
 {
   "version": 1,
   "pip": [
-    "https://github.com/CleepDevice/cleep-libs-prebuild/raw/refs/heads/main/numpy/bullseye/numpy-1.26.4-cp39-cp39-linux_armv7l.whl",
-    "https://github.com/CleepDevice/cleep-libs-prebuild/raw/refs/heads/main/scipy/bullseye/scipy-1.13.0-cp39-cp39-linux_armv7l.whl",
+    "https://github.com/CleepDevice/cleep-libs-prebuild/raw/refs/heads/main/numpy/bullseye/numpy-2.0.2-cp39-cp39-linux_armv7l.whl",
+    "https://github.com/CleepDevice/cleep-libs-prebuild/raw/refs/heads/main/scipy/bullseye/scipy-1.13.1-cp39-cp39-linux_armv7l.whl",
     "workalendar==17.0.0",
     "pycountry-convert>=0.7.2,<0.8.0",
     "pytz==2024.1",
