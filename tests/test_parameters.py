@@ -3,8 +3,6 @@
 from cleep.libs.tests import session
 import unittest
 import logging
-import sys
-sys.path.append('../')
 from backend.parameters import Parameters
 from backend.parameterscountryupdateevent import ParametersCountryUpdateEvent
 from backend.parametershostnameupdateevent import ParametersHostnameUpdateEvent
