@@ -1,41 +1,53 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from cleep.libs.tests import session
-import unittest
+import datetime
 import logging
+import time
+import unittest
+from unittest.mock import ANY, MagicMock, Mock, patch
+
+import pytz
+from cleep.exception import CommandError, InvalidParameter, MissingParameter, Unauthorized
+from cleep.libs.tests import session
+from cleep.libs.tests.common import get_log_level
+from cleep.libs.tests.mockdatetime import mock_datetime
+
 from backend.parameters import Parameters
+from backend.parametersauthupdateevent import ParametersAuthUpdateEvent
 from backend.parameterscountryupdateevent import ParametersCountryUpdateEvent
 from backend.parametershostnameupdateevent import ParametersHostnameUpdateEvent
-from backend.parametersauthupdateevent import ParametersAuthUpdateEvent
 from backend.parameterstimenowevent import ParametersTimeNowEvent
 from backend.parameterstimesunriseevent import ParametersTimeSunriseEvent
 from backend.parameterstimesunsetevent import ParametersTimeSunsetEvent
-from backend.timetomessageformatter import TimeToMessageFormatter
 from backend.timetoidentifiedmessageformatter import TimeToIdentifiedMessageFormatter
-from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
-from unittest.mock import patch, MagicMock, Mock, ANY
-from cleep.libs.tests.mockdatetime import mock_datetime
-import datetime
-import pytz
-import time
-from cleep.libs.tests.common import get_log_level
+from backend.timetomessageformatter import TimeToMessageFormatter
 
 LOG_LEVEL = get_log_level()
+
 
 class TestsParameters(unittest.TestCase):
 
     def setUp(self):
         self.session = session.TestSession(self)
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
 
     def tearDown(self):
         self.session.clean()
 
-    def init_session(self, mock_sun=None, mock_cleepconf=None,
-        mock_hostname=None, set_hostname_return_value=True, get_hostname_return_value='dummy',
-        mock_tzfinder=None, tzfinder_timezoneat_side_effect=None, tzfinder_timezoneat_return_value=None, start=True):
+    def init_session(
+        self,
+        mock_sun=None,
+        mock_cleepconf=None,
+        mock_hostname=None,
+        set_hostname_return_value=True,
+        get_hostname_return_value="dummy",
+        mock_tzfinder=None,
+        tzfinder_timezoneat_side_effect=None,
+        tzfinder_timezoneat_return_value=None,
+        start=True,
+    ):
         if mock_sun:
-            local_tz = pytz.timezone('Europe/London')
+            local_tz = pytz.timezone("Europe/London")
             mock_sun.return_value.sunset.return_value = local_tz.localize(datetime.datetime.fromtimestamp(1591735300))
             mock_sun.return_value.sunrise.return_value = local_tz.localize(datetime.datetime.fromtimestamp(1591735200))
 
@@ -45,19 +57,17 @@ class TestsParameters(unittest.TestCase):
 
         if mock_tzfinder:
             if tzfinder_timezoneat_side_effect:
-                mock_tzfinder.return_value.timezone_at.side_effect = tzfinder_timezoneat_side_effect 
+                mock_tzfinder.return_value.timezone_at.side_effect = tzfinder_timezoneat_side_effect
             else:
                 mock_tzfinder.return_value.timezone_at.return_value = tzfinder_timezoneat_return_value
 
         if mock_cleepconf:
             get_auth_get_mock = Mock()
-            get_auth_get_mock.get = Mock(side_effect=[True, ['account1']])
+            get_auth_get_mock.get = Mock(side_effect=[True, ["account1"]])
             mock_cleepconf.return_value.get_auth.return_value = get_auth_get_mock
 
         self.module = self.session.setup(Parameters, mock_on_start=False, mock_on_stop=False)
-        self.session.add_mock_command(
-            self.session.make_mock_command('set_auth_enabled')
-        )
+        self.session.add_mock_command(self.session.make_mock_command("set_auth_enabled"))
 
         if start:
             self.session.start_module(self.module)
@@ -72,10 +82,7 @@ class TestsParameters(unittest.TestCase):
 
         self.session.start_module(self.module)
 
-        self.module._add_device.assert_called_with({
-            'type': 'clock',
-            'name': 'Clock'
-        })
+        self.module._add_device.assert_called_with({"type": "clock", "name": "Clock"})
         self.module.set_country.assert_called()
         self.module.set_sun.assert_called()
 
@@ -83,44 +90,52 @@ class TestsParameters(unittest.TestCase):
         self.init_session(start=False)
         self.module._add_device = Mock()
         self.module._get_device_count = Mock(return_value=1)
-        self.module._get_config_field = Mock(side_effect=[
-            {'country': 'United Kingdom', 'alpha2': 'GB'},
-            'Europe/London',
-        ])
+        self.module._get_config_field = Mock(
+            side_effect=[
+                {"country": "United Kingdom", "alpha2": "GB"},
+                "Europe/London",
+            ]
+        )
         self.module.set_country = Mock()
         self.module.set_sun = Mock()
-        self.module.get_module_devices = Mock(return_value={
-            'other-uuid': {'type': 'other'},
-            'clock-uuid': {'type': 'clock'},
-        })
+        self.module.get_module_devices = Mock(
+            return_value={
+                "other-uuid": {"type": "other"},
+                "clock-uuid": {"type": "clock"},
+            }
+        )
 
         self.module._configure()
 
         self.module._add_device.assert_not_called()
         self.module.set_country.assert_not_called()
         self.module.set_sun.assert_called()
-        self.assertEqual(self.module._Parameters__clock_uuid, 'clock-uuid')
+        self.assertEqual(self.module._Parameters__clock_uuid, "clock-uuid")
 
-    @patch('backend.parameters.get_localzone')
+    @patch("backend.parameters.get_localzone")
     def test_configure_fallback_local_timezone(self, mock_localzone):
         self.init_session(start=False)
-        mock_localzone.return_value.zone = 'Europe/Berlin'
+        mock_localzone.return_value.zone = "Europe/Berlin"
         self.module._add_device = Mock()
         self.module._get_device_count = Mock(return_value=1)
-        self.module._get_config_field = Mock(side_effect=[
-            {'country': 'Germany', 'alpha2': 'DE'},
-            None,
-        ])
+        self.module._get_config_field = Mock(
+            side_effect=[
+                {"country": "Germany", "alpha2": "DE"},
+                None,
+            ]
+        )
         self.module.set_country = Mock()
         self.module.set_sun = Mock()
-        self.module.get_module_devices = Mock(return_value={
-            'clock-uuid': {'type': 'clock'},
-        })
+        self.module.get_module_devices = Mock(
+            return_value={
+                "clock-uuid": {"type": "clock"},
+            }
+        )
 
         self.module._configure()
 
         mock_localzone.assert_called()
-        self.assertEqual(str(self.module.timezone), 'Europe/Berlin')
+        self.assertEqual(str(self.module.timezone), "Europe/Berlin")
 
     def test_on_stop(self):
         self.init_session(start=False)
@@ -136,7 +151,7 @@ class TestsParameters(unittest.TestCase):
 
         self.module._on_stop()
 
-    @patch('backend.parameters.time.time', Mock(return_value=1607538850))
+    @patch("backend.parameters.time.time", Mock(return_value=1607538850))
     def test_on_start_launch_time_task_with_sync_timer(self):
         self.init_session(start=False)
         mock_timer = Mock()
@@ -150,18 +165,18 @@ class TestsParameters(unittest.TestCase):
         self.session.task_factory.create_timer.assert_called_with(50, mock_task.start)
         mock_timer.start.assert_called()
 
-    #@patch('backend.parameters.time.time', Mock(return_value=1607538850))
-    #def test_on_start_sync_time_first_launch(self):
+    # @patch('backend.parameters.time.time', Mock(return_value=1607538850))
+    # def test_on_start_sync_time_first_launch(self):
     #    self.init_session(start=False)
     #    mock_task = Mock()
     #    self.session.task_factory.create_task = Mock(return_value=mock_task)
-    
+
     #    self.module._on_start()
 
     #    self.session.task_factory.create_task.assert_called()
 
-    #@patch('backend.parameters.time.time', Mock(return_value=1575916450))
-    #def test_on_start_sync_time_with_sync_timer(self):
+    # @patch('backend.parameters.time.time', Mock(return_value=1575916450))
+    # def test_on_start_sync_time_with_sync_timer(self):
     #    self.init_session(start=False)
     #    self.module._get_config_field = Mock(side_effect=[{}, {}, 'france', 'Europe/Paris', {'latitude': 52.2040, 'longitude': 0.1208}, 1607538850])
     #    mock_task = Mock()
@@ -169,10 +184,10 @@ class TestsParameters(unittest.TestCase):
 
     #    self.session.start_module(self.module)
     #    logging.debug(self.module._get_config_field.call_args_list)
-        
+
     #    self.assertEqual(mock_task.call_count, 1)
 
-    @patch('backend.parameters.time.time', Mock(return_value=1607538840))
+    @patch("backend.parameters.time.time", Mock(return_value=1607538840))
     def test_on_start_launch_time_task_without_sync_timer(self):
         self.init_session(start=False)
         self.module._get_config_field = Mock(side_effect=[1607538150])
@@ -186,7 +201,7 @@ class TestsParameters(unittest.TestCase):
         self.session.task_factory.create_timer.assert_not_called()
         mock_task.start.assert_called()
 
-    @patch('backend.parameters.time.time', Mock(return_value=1607538840))
+    @patch("backend.parameters.time.time", Mock(return_value=1607538840))
     def test_on_start_restore_saved_time(self):
         self.init_session(start=False)
         self.module._get_config_field = Mock(side_effect=[1607539150])
@@ -196,112 +211,112 @@ class TestsParameters(unittest.TestCase):
 
         self.module._set_system_time.assert_called_with(1607539150)
 
-    @patch('backend.parameters.Sun')
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.Sun")
+    @patch("backend.parameters.CleepConf")
     def test_get_module_config_default(self, mock_cleepconf, mock_sun):
         self.init_session(mock_sun=mock_sun, mock_cleepconf=mock_cleepconf)
 
         conf = self.module.get_module_config()
-        logging.debug('Conf: %s' % conf)
+        logging.debug("Conf: %s" % conf)
 
-        self.assertTrue('sun' in conf)
-        self.assertTrue('country' in conf)
-        self.assertTrue('position' in conf)
-        self.assertTrue('timezone' in conf)
-        self.assertTrue('hostname' in conf)
-        self.assertTrue('authenabled' in conf)
-        self.assertTrue('authaccounts' in conf)
+        self.assertTrue("sun" in conf)
+        self.assertTrue("country" in conf)
+        self.assertTrue("position" in conf)
+        self.assertTrue("timezone" in conf)
+        self.assertTrue("hostname" in conf)
+        self.assertTrue("authenabled" in conf)
+        self.assertTrue("authaccounts" in conf)
 
-        self.assertTrue('sunset_iso' in conf['sun'])
-        self.assertTrue('sunset' in conf['sun'])
-        self.assertTrue('sunrise_iso' in conf['sun'])
-        self.assertTrue('sunrise' in conf['sun'])
+        self.assertTrue("sunset_iso" in conf["sun"])
+        self.assertTrue("sunset" in conf["sun"])
+        self.assertTrue("sunrise_iso" in conf["sun"])
+        self.assertTrue("sunrise" in conf["sun"])
 
-        self.assertTrue('alpha2' in conf['country'])
-        self.assertTrue('country' in conf['country'])
+        self.assertTrue("alpha2" in conf["country"])
+        self.assertTrue("country" in conf["country"])
 
-        self.assertTrue('latitude' in conf['position'])
-        self.assertTrue('longitude' in conf['position'])
+        self.assertTrue("latitude" in conf["position"])
+        self.assertTrue("longitude" in conf["position"])
 
-        self.assertEqual(conf['authenabled'], True)
-        self.assertEqual(conf['authaccounts'], ['account1'])
+        self.assertEqual(conf["authenabled"], True)
+        self.assertEqual(conf["authaccounts"], ["account1"])
 
-    @patch('time.time', MagicMock(return_value=1591818206))
+    @patch("time.time", MagicMock(return_value=1591818206))
     def test_get_module_devices(self):
-        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0)  # 1591645808
         with mock_datetime(utc_now, datetime):
             self.init_session()
             devices = self.module.get_module_devices()
-            logging.debug('Devices: %s' % devices)
+            logging.debug("Devices: %s" % devices)
 
             self.assertEqual(len(devices), 1)
             uid = list(devices.keys())[0]
-            self.assertEqual(devices[uid]['name'], 'Clock')
-            self.assertTrue('timestamp' in devices[uid])
-            self.assertEqual(devices[uid]['iso'], '2020-06-08T20:50:08+01:00')
-            self.assertEqual(devices[uid]['year'], 2020)
-            self.assertEqual(devices[uid]['month'], 6)
-            self.assertEqual(devices[uid]['day'], 8)
-            self.assertEqual(devices[uid]['hour'], 20)
-            self.assertEqual(devices[uid]['minute'], 50)
-            self.assertTrue('sunset' in devices[uid])
-            self.assertTrue('sunrise' in devices[uid])
-            self.assertEqual(devices[uid]['weekday'], 0)
-            self.assertEqual(devices[uid]['weekday_literal'], 'monday')
-            self.assertEqual(devices[uid]['type'], 'clock')
-            self.assertTrue('uuid' in devices[uid])
+            self.assertEqual(devices[uid]["name"], "Clock")
+            self.assertTrue("timestamp" in devices[uid])
+            self.assertEqual(devices[uid]["iso"], "2020-06-08T20:50:08+01:00")
+            self.assertEqual(devices[uid]["year"], 2020)
+            self.assertEqual(devices[uid]["month"], 6)
+            self.assertEqual(devices[uid]["day"], 8)
+            self.assertEqual(devices[uid]["hour"], 20)
+            self.assertEqual(devices[uid]["minute"], 50)
+            self.assertTrue("sunset" in devices[uid])
+            self.assertTrue("sunrise" in devices[uid])
+            self.assertEqual(devices[uid]["weekday"], 0)
+            self.assertEqual(devices[uid]["weekday_literal"], "monday")
+            self.assertEqual(devices[uid]["type"], "clock")
+            self.assertTrue("uuid" in devices[uid])
 
     def test_get_module_devices_weekdays(self):
-        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0)  # 1591645808
         uid = None
         with mock_datetime(utc_now, datetime):
             self.init_session()
             devices = self.module.get_module_devices()
             uid = list(devices.keys())[0]
 
-            self.assertEqual(devices[uid]['weekday'], 0)
-            self.assertEqual(devices[uid]['weekday_literal'], 'monday')
+            self.assertEqual(devices[uid]["weekday"], 0)
+            self.assertEqual(devices[uid]["weekday_literal"], "monday")
 
-        utc_now = datetime.datetime(2020, 6, 9, 19, 50, 8, 0) # 1591732208
+        utc_now = datetime.datetime(2020, 6, 9, 19, 50, 8, 0)  # 1591732208
         with mock_datetime(utc_now, datetime):
             devices = self.module.get_module_devices()
-            self.assertEqual(devices[uid]['weekday'], 1)
-            self.assertEqual(devices[uid]['weekday_literal'], 'tuesday')
+            self.assertEqual(devices[uid]["weekday"], 1)
+            self.assertEqual(devices[uid]["weekday_literal"], "tuesday")
 
-        utc_now = datetime.datetime(2020, 6, 10, 19, 50, 8, 0) # 1591818608
+        utc_now = datetime.datetime(2020, 6, 10, 19, 50, 8, 0)  # 1591818608
         with mock_datetime(utc_now, datetime):
             devices = self.module.get_module_devices()
-            self.assertEqual(devices[uid]['weekday'], 2)
-            self.assertEqual(devices[uid]['weekday_literal'], 'wednesday')
+            self.assertEqual(devices[uid]["weekday"], 2)
+            self.assertEqual(devices[uid]["weekday_literal"], "wednesday")
 
-        utc_now = datetime.datetime(2020, 6, 11, 19, 50, 8, 0) # 1591905008
+        utc_now = datetime.datetime(2020, 6, 11, 19, 50, 8, 0)  # 1591905008
         with mock_datetime(utc_now, datetime):
             devices = self.module.get_module_devices()
-            self.assertEqual(devices[uid]['weekday'], 3)
-            self.assertEqual(devices[uid]['weekday_literal'], 'thursday')
+            self.assertEqual(devices[uid]["weekday"], 3)
+            self.assertEqual(devices[uid]["weekday_literal"], "thursday")
 
-        utc_now = datetime.datetime(2020, 6, 12, 19, 50, 8, 0) # 1591991408
+        utc_now = datetime.datetime(2020, 6, 12, 19, 50, 8, 0)  # 1591991408
         with mock_datetime(utc_now, datetime):
             devices = self.module.get_module_devices()
-            self.assertEqual(devices[uid]['weekday'], 4)
-            self.assertEqual(devices[uid]['weekday_literal'], 'friday')
+            self.assertEqual(devices[uid]["weekday"], 4)
+            self.assertEqual(devices[uid]["weekday_literal"], "friday")
 
-        utc_now = datetime.datetime(2020, 6, 13, 19, 50, 8, 0) # 1592077808
+        utc_now = datetime.datetime(2020, 6, 13, 19, 50, 8, 0)  # 1592077808
         with mock_datetime(utc_now, datetime):
             devices = self.module.get_module_devices()
-            self.assertEqual(devices[uid]['weekday'], 5)
-            self.assertEqual(devices[uid]['weekday_literal'], 'saturday')
+            self.assertEqual(devices[uid]["weekday"], 5)
+            self.assertEqual(devices[uid]["weekday_literal"], "saturday")
 
-        utc_now = datetime.datetime(2020, 6, 14, 19, 50, 8, 0) # 1592164208
+        utc_now = datetime.datetime(2020, 6, 14, 19, 50, 8, 0)  # 1592164208
         with mock_datetime(utc_now, datetime):
             devices = self.module.get_module_devices()
-            self.assertEqual(devices[uid]['weekday'], 6)
-            self.assertEqual(devices[uid]['weekday_literal'], 'sunday')
+            self.assertEqual(devices[uid]["weekday"], 6)
+            self.assertEqual(devices[uid]["weekday_literal"], "sunday")
 
-    @patch('backend.parameters.Console')
+    @patch("backend.parameters.Console")
     def test_set_system_time_success(self, mock_console):
         self.init_session()
-        command_mock = Mock(return_value={'returncode': 0, 'killed': False})
+        command_mock = Mock(return_value={"returncode": 0, "killed": False})
         mock_console.return_value.command = command_mock
         self.module.logger = Mock()
 
@@ -311,10 +326,10 @@ class TestsParameters(unittest.TestCase):
         command_mock.assert_called_with(cmd, timeout=10.0)
         self.module.logger.warn.assert_not_called()
 
-    @patch('backend.parameters.Console')
+    @patch("backend.parameters.Console")
     def test_set_system_time_failure(self, mock_console):
         self.init_session()
-        command_mock = Mock(return_value={'returncode': 1, 'killed': False})
+        command_mock = Mock(return_value={"returncode": 1, "killed": False})
         mock_console.return_value.command = command_mock
         self.module.logger.warning = Mock()
 
@@ -324,10 +339,10 @@ class TestsParameters(unittest.TestCase):
         command_mock.assert_called_with(cmd, timeout=10.0)
         self.module.logger.warning.assert_called()
 
-    @patch('backend.parameters.Console')
+    @patch("backend.parameters.Console")
     def test_set_system_time_killed(self, mock_console):
         self.init_session()
-        command_mock = Mock(return_value={'returncode': 0, 'killed': True})
+        command_mock = Mock(return_value={"returncode": 0, "killed": True})
         mock_console.return_value.command = command_mock
         self.module.logger.warning = Mock()
 
@@ -338,28 +353,33 @@ class TestsParameters(unittest.TestCase):
         self.module.logger.warning.assert_called()
 
     def test_time_task_now_event(self):
-        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0)  # 1591645808
         with mock_datetime(utc_now, datetime):
             self.init_session()
-            self.module.timezone = pytz.timezone('Europe/London')
+            self.module.timezone = pytz.timezone("Europe/London")
             self.module._set_config_field = Mock()
 
             self.module._time_task()
 
-            self.assertTrue(self.session.event_called_with('parameters.time.now', {
-                'hour': 20,
-                'day': 8,
-                'month': 6,
-                'weekday_literal': 'monday',
-                'timestamp': 1591645808,
-                'weekday': 0,
-                'iso': '2020-06-08T20:50:08+01:00',
-                'year': 2020,
-                'sunset': self.module.suns['sunset'],
-                'sunrise': self.module.suns['sunrise'],
-                'minute': 50
-            }))
-            self.module._set_config_field.assert_called_with('timestamp', 1591645808)
+            self.assertTrue(
+                self.session.event_called_with(
+                    "parameters.time.now",
+                    {
+                        "hour": 20,
+                        "day": 8,
+                        "month": 6,
+                        "weekday_literal": "monday",
+                        "timestamp": 1591645808,
+                        "weekday": 0,
+                        "iso": "2020-06-08T20:50:08+01:00",
+                        "year": 2020,
+                        "sunset": self.module.suns["sunset"],
+                        "sunrise": self.module.suns["sunrise"],
+                        "minute": 50,
+                    },
+                )
+            )
+            self.module._set_config_field.assert_called_with("timestamp", 1591645808)
 
     def test_time_task_sunrise_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 8, 15, 8, 0)
@@ -368,7 +388,7 @@ class TestsParameters(unittest.TestCase):
             self.module.sunrise = pytz.utc.localize(utc_now).astimezone(self.module.timezone)
 
             self.module._time_task()
-            self.assertTrue(self.session.event_called('parameters.time.sunrise'))
+            self.assertTrue(self.session.event_called("parameters.time.sunrise"))
 
     def test_time_task_sunset_event(self):
         utc_now = datetime.datetime(2020, 6, 8, 20, 5, 8, 0)
@@ -377,7 +397,7 @@ class TestsParameters(unittest.TestCase):
             self.module.sunset = pytz.utc.localize(utc_now).astimezone(self.module.timezone)
 
             self.module._time_task()
-            self.assertTrue(self.session.event_called('parameters.time.sunset'))
+            self.assertTrue(self.session.event_called("parameters.time.sunset"))
 
     def test_time_task_update_sun_after_midnight(self):
         utc_now = datetime.datetime(2020, 6, 8, 23, 5, 8, 0)
@@ -390,64 +410,65 @@ class TestsParameters(unittest.TestCase):
             self.assertTrue(self.module.set_sun.called)
 
     def test_get_time(self):
-        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0) # 1591645808
+        utc_now = datetime.datetime(2020, 6, 8, 19, 50, 8, 0)  # 1591645808
         with mock_datetime(utc_now, datetime):
             self.init_session()
 
             the_time = self.module.get_time()
-            logging.debug('The time: %s', the_time)
+            logging.debug("The time: %s", the_time)
 
-            self.assertEqual(the_time, {
-                'timestamp': 1591645808.0,
-                'iso': '2020-06-08T20:50:08+01:00',
-                'year': 2020,
-                'month': 6,
-                'day': 8,
-                'hour': 20,
-                'minute': 50,
-                'weekday': 0,
-                'weekday_literal': 'monday'
-            })
+            self.assertEqual(
+                the_time,
+                {
+                    "timestamp": 1591645808.0,
+                    "iso": "2020-06-08T20:50:08+01:00",
+                    "year": 2020,
+                    "month": 6,
+                    "day": 8,
+                    "hour": 20,
+                    "minute": 50,
+                    "weekday": 0,
+                    "weekday_literal": "monday",
+                },
+            )
 
-    @patch('cleep.libs.configs.hostname.Hostname')
+    @patch("cleep.libs.configs.hostname.Hostname")
     def test_set_hostname_succeed(self, mock_hostname):
         self.init_session(mock_hostname=mock_hostname)
-        
-        self.assertTrue(self.module.set_hostname('dummy'))
-        self.assertTrue(self.session.event_called_with('parameters.hostname.update', {
-            'hostname': 'dummy'
-        }))
 
-    @patch('backend.parameters.Hostname')
+        self.assertTrue(self.module.set_hostname("dummy"))
+        self.assertTrue(self.session.event_called_with("parameters.hostname.update", {"hostname": "dummy"}))
+
+    @patch("backend.parameters.Hostname")
     def test_set_hostname_failed(self, mock_hostname):
         self.init_session(mock_hostname=mock_hostname, set_hostname_return_value=False)
-        
-        self.assertFalse(self.module.set_hostname('dummy'))
-        self.assertFalse(self.session.event_called('parameters.hostname.update'))
+
+        self.assertFalse(self.module.set_hostname("dummy"))
+        self.assertFalse(self.session.event_called("parameters.hostname.update"))
 
     def test_set_hostname_invalid_name(self):
         self.init_session()
 
         with self.assertRaises(InvalidParameter):
-            self.module.set_hostname('dummy?')
+            self.module.set_hostname("dummy?")
         with self.assertRaises(InvalidParameter):
-            self.module.set_hostname('dummy-')
+            self.module.set_hostname("dummy-")
         with self.assertRaises(InvalidParameter):
-            self.module.set_hostname('dum!my')
+            self.module.set_hostname("dum!my")
         with self.assertRaises(InvalidParameter):
-            self.module.set_hostname('dummy.')
+            self.module.set_hostname("dummy.")
 
-    @patch('backend.parameters.Hostname')
+    @patch("backend.parameters.Hostname")
     def test_get_hostname(self, mock_hostname):
-        self.init_session(mock_hostname=mock_hostname, get_hostname_return_value='hello')
+        self.init_session(mock_hostname=mock_hostname, get_hostname_return_value="hello")
 
-        self.assertEqual(self.module.get_hostname(), 'hello')
+        self.assertEqual(self.module.get_hostname(), "hello")
 
     def test_get_position(self):
         self.init_session()
         position = self.module.get_position()
-        self.assertTrue('latitude' in position)
-        self.assertTrue('longitude' in position)
+        self.assertTrue("latitude" in position)
+        self.assertTrue("longitude" in position)
 
     def test_set_position(self):
         self.init_session()
@@ -461,8 +482,8 @@ class TestsParameters(unittest.TestCase):
         self.assertTrue(self.module.set_sun.called)
 
         position = self.module.get_position()
-        self.assertEqual(position['latitude'], 48.8591554)
-        self.assertEqual(position['longitude'], 2.2907284)
+        self.assertEqual(position["latitude"], 48.8591554)
+        self.assertEqual(position["longitude"], 2.2907284)
 
     def test_set_position_exception(self):
         self.init_session()
@@ -472,7 +493,7 @@ class TestsParameters(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Parameter "latitude" is missing')
 
         with self.assertRaises(InvalidParameter) as cm:
-            self.module.set_position('48.8591554', 2.2907284)
+            self.module.set_position("48.8591554", 2.2907284)
         self.assertEqual(str(cm.exception), 'Parameter "latitude" is invalid')
 
         with self.assertRaises(MissingParameter) as cm:
@@ -480,7 +501,7 @@ class TestsParameters(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Parameter "longitude" is missing')
 
         with self.assertRaises(InvalidParameter) as cm:
-            self.module.set_position(48.8591554, '2')
+            self.module.set_position(48.8591554, "2")
         self.assertEqual(str(cm.exception), 'Parameter "longitude" is invalid')
 
         with self.assertRaises(InvalidParameter) as cm:
@@ -494,7 +515,7 @@ class TestsParameters(unittest.TestCase):
         self.module._set_config_field = Mock(return_value=False)
         with self.assertRaises(CommandError) as cm:
             self.module.set_position(48.8591554, 2.2907284)
-        self.assertEqual(str(cm.exception), 'Unable to save position')
+        self.assertEqual(str(cm.exception), "Unable to save position")
 
     def test_set_position_accepts_int(self):
         self.init_session()
@@ -504,77 +525,84 @@ class TestsParameters(unittest.TestCase):
 
         self.module.set_position(48, 2)
         position = self.module.get_position()
-        self.assertEqual(position['latitude'], 48.0)
-        self.assertEqual(position['longitude'], 2.0)
-        self.assertIsInstance(position['latitude'], float)
-        self.assertIsInstance(position['longitude'], float)
+        self.assertEqual(position["latitude"], 48.0)
+        self.assertEqual(position["longitude"], 2.0)
+        self.assertIsInstance(position["latitude"], float)
+        self.assertIsInstance(position["longitude"], float)
 
     def test_set_sun_clears_when_position_unset(self):
         self.init_session()
         self.module.suns = {
-            'sunrise': 123,
-            'sunrise_iso': 'stale',
-            'sunset': 456,
-            'sunset_iso': 'stale',
+            "sunrise": 123,
+            "sunrise_iso": "stale",
+            "sunset": 456,
+            "sunset_iso": "stale",
         }
         self.module.sunrise = object()
         self.module.sunset = object()
-        self.module._get_config_field = Mock(return_value={
-            'latitude': 0,
-            'longitude': 0,
-        })
+        self.module._get_config_field = Mock(
+            return_value={
+                "latitude": 0,
+                "longitude": 0,
+            }
+        )
 
         self.module.set_sun()
 
         self.assertIsNone(self.module.sunrise)
         self.assertIsNone(self.module.sunset)
-        self.assertEqual(self.module.suns, {
-            'sunrise': 0,
-            'sunrise_iso': '',
-            'sunset': 0,
-            'sunset_iso': '',
-        })
+        self.assertEqual(
+            self.module.suns,
+            {
+                "sunrise": 0,
+                "sunrise_iso": "",
+                "sunset": 0,
+                "sunset_iso": "",
+            },
+        )
 
-    @patch('backend.parameters.Sun')
+    @patch("backend.parameters.Sun")
     def test_set_sun_computes_times(self, mock_sun):
         self.init_session(mock_sun=mock_sun)
-        self.module.timezone = pytz.timezone('Europe/London')
-        self.module._get_config_field = Mock(return_value={
-            'latitude': 52.204,
-            'longitude': 0.1208,
-        })
+        self.module.timezone = pytz.timezone("Europe/London")
+        self.module._get_config_field = Mock(
+            return_value={
+                "latitude": 52.204,
+                "longitude": 0.1208,
+            }
+        )
 
         self.module.set_sun()
 
         self.assertIsNotNone(self.module.sunrise)
         self.assertIsNotNone(self.module.sunset)
-        self.assertTrue(self.module.suns['sunrise'] > 0)
-        self.assertTrue(self.module.suns['sunset'] > 0)
-        self.assertTrue(self.module.suns['sunrise_iso'])
-        self.assertTrue(self.module.suns['sunset_iso'])
+        self.assertTrue(self.module.suns["sunrise"] > 0)
+        self.assertTrue(self.module.suns["sunset"] > 0)
+        self.assertTrue(self.module.suns["sunrise_iso"])
+        self.assertTrue(self.module.suns["sunset_iso"])
 
     def test_get_sun(self):
         self.init_session()
         self.module.suns = {
-            'sunrise': 1,
-            'sunrise_iso': 'a',
-            'sunset': 2,
-            'sunset_iso': 'b',
+            "sunrise": 1,
+            "sunrise_iso": "a",
+            "sunset": 2,
+            "sunset_iso": "b",
         }
 
         self.assertEqual(self.module.get_sun(), self.module.suns)
 
     def test_get_timezone(self):
         self.init_session()
-        self.module._get_config_field = Mock(return_value='Europe/Paris')
+        self.module._get_config_field = Mock(return_value="Europe/Paris")
 
-        self.assertEqual(self.module.get_timezone(), 'Europe/Paris')
+        self.assertEqual(self.module.get_timezone(), "Europe/Paris")
 
     def test_get_country(self):
         self.init_session()
         country = self.module.get_country()
-        self.assertEqual(country['alpha2'], 'GB')
-        self.assertEqual(country['country'], 'United Kingdom')
+        self.assertEqual(country["alpha2"], "GB")
+        self.assertEqual(country["country"], "United Kingdom")
 
     def test_set_country(self):
         self.init_session()
@@ -587,34 +615,44 @@ class TestsParameters(unittest.TestCase):
 
         self.module.set_country()
         country = self.module.get_country()
-        self.assertEqual(country['alpha2'], 'FR')
-        self.assertEqual(country['country'], 'France')
+        self.assertEqual(country["alpha2"], "FR")
+        self.assertEqual(country["country"], "France")
 
-        self.assertTrue(self.session.event_called_with('parameters.country.update', {
-            'alpha2': 'FR',
-            'country': 'France',
-        }))
+        self.assertTrue(
+            self.session.event_called_with(
+                "parameters.country.update",
+                {
+                    "alpha2": "FR",
+                    "country": "France",
+                },
+            )
+        )
 
-    @patch('backend.parameters.reverse_geocode')
+    @patch("backend.parameters.reverse_geocode")
     def test_set_country_geocode_exception(self, mock_reverse_geo):
-        mock_reverse_geo.search.side_effect = Exception('Test exception')
+        mock_reverse_geo.search.side_effect = Exception("Test exception")
         self.init_session()
 
         self.module.set_country()
 
-        self.assertFalse(self.session.event_called('parameters.country.update'))
+        self.assertFalse(self.session.event_called("parameters.country.update"))
 
-    @patch('backend.parameters.reverse_geocode')
+    @patch("backend.parameters.reverse_geocode")
     def test_set_country_incomplete_geo(self, mock_reverse_geo):
-        mock_reverse_geo.search.return_value = [{'place': 'nowhere'}]
+        mock_reverse_geo.search.return_value = [{"place": "nowhere"}]
         self.init_session()
 
         self.module.set_country()
 
-        self.assertTrue(self.session.event_called_with('parameters.country.update', {
-            'alpha2': None,
-            'country': None,
-        }))
+        self.assertTrue(
+            self.session.event_called_with(
+                "parameters.country.update",
+                {
+                    "alpha2": None,
+                    "country": None,
+                },
+            )
+        )
 
     def test_set_country_commanderror(self):
         self.init_session()
@@ -628,28 +666,25 @@ class TestsParameters(unittest.TestCase):
 
         with self.assertRaises(CommandError) as cm:
             self.module.set_country()
-        self.assertEqual(str(cm.exception), 'Unable to save country')
+        self.assertEqual(str(cm.exception), "Unable to save country")
 
     def test_set_country_no_position(self):
         self.init_session()
-        self.module._set_config_field('position', {
-            'latitude': 0,
-            'longitude': 0
-        })
+        self.module._set_config_field("position", {"latitude": 0, "longitude": 0})
 
         self.module.set_country()
 
-    @patch('backend.parameters.os.path.exists', Mock(return_value=True))
-    @patch('backend.parameters.Console')
-    @patch('backend.parameters.TimezoneFinder')
+    @patch("backend.parameters.os.path.exists", Mock(return_value=True))
+    @patch("backend.parameters.Console")
+    @patch("backend.parameters.TimezoneFinder")
     def test_set_timezone(self, mock_tzfinder, mock_console):
         self.init_session(
             mock_tzfinder=mock_tzfinder,
-            tzfinder_timezoneat_return_value='Europe/Paris',
+            tzfinder_timezoneat_return_value="Europe/Paris",
         )
         mock_console.return_value.command.return_value = {
-            'returncode': 0,
-            'stderr': '',
+            "returncode": 0,
+            "stderr": "",
         }
         self.module.cleep_filesystem.rm = Mock()
         self.module.cleep_filesystem.write_data = Mock(return_value=True)
@@ -657,41 +692,38 @@ class TestsParameters(unittest.TestCase):
 
         self.assertTrue(self.module.set_timezone())
         self.module._time_task.assert_called()
-        self.assertEqual(str(self.module.timezone), 'Europe/Paris')
+        self.assertEqual(str(self.module.timezone), "Europe/Paris")
 
     def test_set_timezone_no_position(self):
         self.init_session()
-        self.module._set_config_field('position', {
-            'latitude': 0,
-            'longitude': 0
-        })
+        self.module._set_config_field("position", {"latitude": 0, "longitude": 0})
 
         self.assertFalse(self.module.set_timezone())
 
-    @patch('backend.parameters.TimezoneFinder')
+    @patch("backend.parameters.TimezoneFinder")
     def test_set_timezone_timezonefinder_exception(self, mock_tzfinder):
-        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=Exception('Test exception'))
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=Exception("Test exception"))
 
         self.assertFalse(self.module.set_timezone())
 
-    @patch('backend.parameters.TimezoneFinder')
+    @patch("backend.parameters.TimezoneFinder")
     def test_set_timezone_timezonefinder_valueerror(self, mock_tzfinder):
-        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=ValueError('Test exception'))
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_side_effect=ValueError("Test exception"))
 
         self.assertFalse(self.module.set_timezone())
 
-    @patch('backend.parameters.TimezoneFinder')
+    @patch("backend.parameters.TimezoneFinder")
     def test_set_timezone_unable_set_config(self, mock_tzfinder):
-        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value='Europe/Paris')
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value="Europe/Paris")
 
         self.module._set_config_field = Mock(return_value=False)
         with self.assertRaises(CommandError) as cm:
             self.module.set_timezone()
-        self.assertEqual(str(cm.exception), 'Unable to save timezone')
+        self.assertEqual(str(cm.exception), "Unable to save timezone")
 
-    @patch('backend.parameters.TimezoneFinder')
+    @patch("backend.parameters.TimezoneFinder")
     def test_set_timezone_invalid_timezone(self, mock_tzfinder):
-        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value='Europe/Dummy')
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value="Europe/Dummy")
 
         with self.assertRaises(CommandError) as cm:
             self.module.set_timezone()
@@ -703,48 +735,40 @@ class TestsParameters(unittest.TestCase):
         self.module.cleep_filesystem.write_data = Mock(return_value=False)
         self.assertFalse(self.module.set_timezone())
 
-    @patch('backend.parameters.Console')
+    @patch("backend.parameters.Console")
     def test_set_timezone_command_failed(self, mock_console):
         self.init_session()
 
-        mock_console.return_value.command.return_value = {'returncode': 1, 'stderr': 'Test error'}
+        mock_console.return_value.command.return_value = {"returncode": 1, "stderr": "Test error"}
         self.assertFalse(self.module.set_timezone())
 
-    @patch('backend.parameters.os.path.exists', Mock(return_value=True))
-    @patch('backend.parameters.Console')
-    @patch('backend.parameters.TimezoneFinder')
-    def test_set_timezone_timezonefinder_extend_timezone_search(
-        self, mock_tzfinder, mock_console
-    ):
-        mock_tzfinder.return_value.closest_timezone_at = Mock(
-            return_value='Europe/Paris'
+    @patch("backend.parameters.os.path.exists", Mock(return_value=True))
+    @patch("backend.parameters.Console")
+    @patch("backend.parameters.TimezoneFinder")
+    def test_set_timezone_timezonefinder_extend_timezone_search(self, mock_tzfinder, mock_console):
+        mock_tzfinder.return_value.closest_timezone_at = Mock(return_value="Europe/Paris")
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value=None)
+        self.module._get_config_field = Mock(
+            return_value={
+                "latitude": 52.204,
+                "longitude": 0.1208,
+            }
         )
-        self.init_session(
-            mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value=None
-        )
-        self.module._get_config_field = Mock(return_value={
-            'latitude': 52.204,
-            'longitude': 0.1208,
-        })
         mock_console.return_value.command.return_value = {
-            'returncode': 0,
-            'stderr': '',
+            "returncode": 0,
+            "stderr": "",
         }
         self.module.cleep_filesystem.rm = Mock()
         self.module.cleep_filesystem.write_data = Mock(return_value=True)
         self.module._time_task = Mock()
 
         self.assertTrue(self.module.set_timezone())
-        mock_tzfinder.return_value.closest_timezone_at.assert_called_with(
-            lat=52.204, lng=0.1208
-        )
+        mock_tzfinder.return_value.closest_timezone_at.assert_called_with(lat=52.204, lng=0.1208)
 
-    @patch('backend.parameters.TimezoneFinder')
+    @patch("backend.parameters.TimezoneFinder")
     def test_set_timezone_not_found(self, mock_tzfinder):
         mock_tzfinder.return_value.closest_timezone_at = Mock(return_value=None)
-        self.init_session(
-            mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value=None
-        )
+        self.init_session(mock_tzfinder=mock_tzfinder, tzfinder_timezoneat_return_value=None)
 
         self.assertFalse(self.module.set_timezone())
 
@@ -752,21 +776,24 @@ class TestsParameters(unittest.TestCase):
         self.init_session()
 
         holidays = self.module.get_non_working_days(2021)
-        logging.debug('Holidays: %s', holidays)
+        logging.debug("Holidays: %s", holidays)
 
-        self.assertListEqual(holidays, [
-            ('2021-01-01', 'New year'),
-            ('2021-04-02', 'Good Friday'),
-            ('2021-04-04', 'Easter Sunday'),
-            ('2021-04-05', 'Easter Monday'),
-            ('2021-05-03', 'Early May Bank Holiday'),
-            ('2021-05-31', 'Spring Bank Holiday'),
-            ('2021-08-30', 'Late Summer Bank Holiday'),
-            ('2021-12-25', 'Christmas Day'),
-            ('2021-12-26', 'Boxing Day'),
-            ('2021-12-27', 'Christmas Shift'),
-            ('2021-12-28', 'Boxing Day Shift')
-        ])
+        self.assertListEqual(
+            holidays,
+            [
+                ("2021-01-01", "New year"),
+                ("2021-04-02", "Good Friday"),
+                ("2021-04-04", "Easter Sunday"),
+                ("2021-04-05", "Easter Monday"),
+                ("2021-05-03", "Early May Bank Holiday"),
+                ("2021-05-31", "Spring Bank Holiday"),
+                ("2021-08-30", "Late Summer Bank Holiday"),
+                ("2021-12-25", "Christmas Day"),
+                ("2021-12-26", "Boxing Day"),
+                ("2021-12-27", "Christmas Shift"),
+                ("2021-12-28", "Boxing Day Shift"),
+            ],
+        )
 
     def test_get_non_working_days_defaults_to_current_year(self):
         self.init_session()
@@ -781,28 +808,28 @@ class TestsParameters(unittest.TestCase):
         self.module._get_config_field = Mock(return_value={"country": "country", "alpha2": "CO"})
 
         holidays = self.module.get_non_working_days(2021)
-        logging.debug('Holidays: %s', holidays)
+        logging.debug("Holidays: %s", holidays)
 
         self.assertListEqual(holidays, [])
 
     def test_is_non_working_day(self):
         self.init_session()
 
-        self.assertTrue(self.module.is_non_working_day('2021-01-01'))
-        self.assertFalse(self.module.is_non_working_day('2021-01-02'))
+        self.assertTrue(self.module.is_non_working_day("2021-01-01"))
+        self.assertFalse(self.module.is_non_working_day("2021-01-02"))
 
     def test_is_today_non_working_day(self):
         self.init_session()
 
-        with patch('backend.parameters.datetime') as datetime_mock:
-            datetime_mock.date.today.return_value = datetime.date.fromisoformat('2021-01-01')
+        with patch("backend.parameters.datetime") as datetime_mock:
+            datetime_mock.date.today.return_value = datetime.date.fromisoformat("2021-01-01")
             self.module.is_non_working_day = Mock()
             self.assertTrue(self.module.is_today_non_working_day())
-            self.module.is_non_working_day.assert_called_with('2021-01-01')
+            self.module.is_non_working_day.assert_called_with("2021-01-01")
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_get_auth_accounts(self, mock_cleepconf):
-        accounts = ['account1', 'account2']
+        accounts = ["account1", "account2"]
         mock_cleepconf.return_value.get_auth_accounts.return_value = accounts
         self.init_session()
 
@@ -810,10 +837,10 @@ class TestsParameters(unittest.TestCase):
 
         self.assertListEqual(result, accounts)
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_add_auth_account(self, mock_cleepconf):
-        account = 'account'
-        password = 'password'
+        account = "account"
+        password = "password"
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
         self.module._Parameters__publish_auth_status = Mock()
@@ -824,30 +851,30 @@ class TestsParameters(unittest.TestCase):
         self.module._Parameters__reload_rpcserver_auth.assert_called()
         self.module._Parameters__publish_auth_status.assert_called()
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_add_auth_account_invalid_parameters(self, mock_cleepconf):
         self.init_session()
 
         with self.assertRaises(InvalidParameter) as cm:
-            self.module.add_auth_account(123, 'password')
+            self.module.add_auth_account(123, "password")
         self.assertEqual(str(cm.exception), 'Parameter "account" must be of type "str"')
 
         with self.assertRaises(InvalidParameter) as cm:
-            self.module.add_auth_account('account', 123)
+            self.module.add_auth_account("account", 123)
         self.assertEqual(str(cm.exception), 'Parameter "password" must be of type "str"')
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_add_auth_account_failure(self, mock_cleepconf):
-        mock_cleepconf.return_value.add_auth_account = Mock(side_effect=Exception('Test error'))
+        mock_cleepconf.return_value.add_auth_account = Mock(side_effect=Exception("Test error"))
         self.init_session()
 
         with self.assertRaises(CommandError) as cm:
-            self.module.add_auth_account('account', 'password')
-        self.assertEqual(str(cm.exception), 'Test error')
+            self.module.add_auth_account("account", "password")
+        self.assertEqual(str(cm.exception), "Test error")
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_delete_auth_account(self, mock_cleepconf):
-        account = 'account'
+        account = "account"
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
         self.module._Parameters__publish_auth_status = Mock()
@@ -858,7 +885,7 @@ class TestsParameters(unittest.TestCase):
         self.module._Parameters__reload_rpcserver_auth.assert_called()
         self.module._Parameters__publish_auth_status.assert_called()
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_delete_auth_account_invalid_parameters(self, mock_cleepconf):
         self.init_session()
 
@@ -866,21 +893,21 @@ class TestsParameters(unittest.TestCase):
             self.module.delete_auth_account(123)
         self.assertEqual(str(cm.exception), 'Parameter "account" must be of type "str"')
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_delete_auth_account_failure(self, mock_cleepconf):
-        mock_cleepconf.return_value.delete_auth_account = Mock(side_effect=Exception('Test error'))
+        mock_cleepconf.return_value.delete_auth_account = Mock(side_effect=Exception("Test error"))
         self.init_session()
 
         with self.assertRaises(CommandError) as cm:
-            self.module.delete_auth_account('account')
-        self.assertEqual(str(cm.exception), 'Test error')
+            self.module.delete_auth_account("account")
+        self.assertEqual(str(cm.exception), "Test error")
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_enable_auth(self, mock_cleepconf):
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
         self.module._Parameters__publish_auth_status = Mock()
-        mock_cleepconf.return_value.get_auth_accounts.return_value = ['accnunt']
+        mock_cleepconf.return_value.get_auth_accounts.return_value = ["accnunt"]
 
         result = self.module.enable_auth()
 
@@ -888,7 +915,7 @@ class TestsParameters(unittest.TestCase):
         self.module._Parameters__reload_rpcserver_auth.assert_called()
         self.module._Parameters__publish_auth_status.assert_called()
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_enable_auth_no_account_failure(self, mock_cleepconf):
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
@@ -896,9 +923,9 @@ class TestsParameters(unittest.TestCase):
 
         with self.assertRaises(CommandError) as cm:
             result = self.module.enable_auth()
-        self.assertEqual(str(cm.exception), 'Please add account before enabling auth')
+        self.assertEqual(str(cm.exception), "Please add account before enabling auth")
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_disable_auth(self, mock_cleepconf):
         self.init_session()
         self.module._Parameters__reload_rpcserver_auth = Mock()
@@ -910,22 +937,25 @@ class TestsParameters(unittest.TestCase):
         self.module._Parameters__reload_rpcserver_auth.assert_called()
         self.module._Parameters__publish_auth_status.assert_called()
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_publish_auth_status(self, mock_cleepconf):
         self.init_session()
         mock_cleepconf.return_value.is_auth_enabled.return_value = True
-        mock_cleepconf.return_value.get_auth_accounts.return_value = ['account']
+        mock_cleepconf.return_value.get_auth_accounts.return_value = ["account"]
 
         self.module._Parameters__publish_auth_status()
 
-        self.session.assert_command_called_with(
-            'set_auth_enabled', {'enabled': True}, 'inventory'
+        self.session.assert_command_called_with("set_auth_enabled", {"enabled": True}, "inventory")
+        self.assertTrue(
+            self.session.event_called_with(
+                "parameters.auth.update",
+                {
+                    "enabled": True,
+                },
+            )
         )
-        self.assertTrue(self.session.event_called_with('parameters.auth.update', {
-            'enabled': True,
-        }))
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_publish_auth_status_disabled_without_accounts(self, mock_cleepconf):
         self.init_session()
         mock_cleepconf.return_value.is_auth_enabled.return_value = True
@@ -933,11 +963,9 @@ class TestsParameters(unittest.TestCase):
 
         self.module._Parameters__publish_auth_status()
 
-        self.session.assert_command_called_with(
-            'set_auth_enabled', {'enabled': False}, 'inventory'
-        )
+        self.session.assert_command_called_with("set_auth_enabled", {"enabled": False}, "inventory")
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_on_start_publishes_auth_status(self, mock_cleepconf):
         self.init_session(start=False)
         self.module._Parameters__publish_auth_status_with_retry = Mock()
@@ -948,46 +976,36 @@ class TestsParameters(unittest.TestCase):
 
         self.module._on_start()
 
-        self.session.task_factory.create_task.assert_any_call(
-            None, self.module._Parameters__publish_auth_status_with_retry
-        )
+        self.session.task_factory.create_task.assert_any_call(None, self.module._Parameters__publish_auth_status_with_retry)
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_publish_auth_status_with_retry_succeeds(self, mock_cleepconf):
         self.init_session(start=False)
-        self.module._Parameters__publish_auth_status = Mock(
-            side_effect=[False, True]
-        )
+        self.module._Parameters__publish_auth_status = Mock(side_effect=[False, True])
 
-        with patch('gevent.sleep') as mock_sleep:
-            self.module._Parameters__publish_auth_status_with_retry(
-                attempts=3, delay=0.01
-            )
+        with patch("gevent.sleep") as mock_sleep:
+            self.module._Parameters__publish_auth_status_with_retry(attempts=3, delay=0.01)
 
         self.assertEqual(self.module._Parameters__publish_auth_status.call_count, 2)
         mock_sleep.assert_called_once_with(0.01)
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_publish_auth_status_with_retry_all_fail(self, mock_cleepconf):
         self.init_session(start=False)
         self.module._Parameters__publish_auth_status = Mock(return_value=False)
 
-        with patch('gevent.sleep') as mock_sleep:
-            self.module._Parameters__publish_auth_status_with_retry(
-                attempts=3, delay=0.01
-            )
+        with patch("gevent.sleep") as mock_sleep:
+            self.module._Parameters__publish_auth_status_with_retry(attempts=3, delay=0.01)
 
         self.assertEqual(self.module._Parameters__publish_auth_status.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_publish_auth_status_inventory_error(self, mock_cleepconf):
         self.init_session()
         mock_cleepconf.return_value.is_auth_enabled.return_value = True
-        mock_cleepconf.return_value.get_auth_accounts.return_value = ['account']
-        self.module.send_command = Mock(
-            return_value=Mock(error=True, message='inventory down')
-        )
+        mock_cleepconf.return_value.get_auth_accounts.return_value = ["account"]
+        self.module.send_command = Mock(return_value=Mock(error=True, message="inventory down"))
         self.module.logger = Mock()
 
         result = self.module._Parameters__publish_auth_status()
@@ -995,14 +1013,12 @@ class TestsParameters(unittest.TestCase):
         self.assertFalse(result)
         self.module.logger.error.assert_called()
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_publish_auth_status_inventory_error_quiet(self, mock_cleepconf):
         self.init_session()
         mock_cleepconf.return_value.is_auth_enabled.return_value = True
-        mock_cleepconf.return_value.get_auth_accounts.return_value = ['account']
-        self.module.send_command = Mock(
-            return_value=Mock(error=True, message='inventory down')
-        )
+        mock_cleepconf.return_value.get_auth_accounts.return_value = ["account"]
+        self.module.send_command = Mock(return_value=Mock(error=True, message="inventory down"))
         self.module.logger = Mock()
 
         result = self.module._Parameters__publish_auth_status(quiet=True)
@@ -1011,12 +1027,12 @@ class TestsParameters(unittest.TestCase):
         self.module.logger.debug.assert_called()
         self.module.logger.error.assert_not_called()
 
-    @patch('backend.parameters.CleepConf')
+    @patch("backend.parameters.CleepConf")
     def test_publish_auth_status_event_send_failure(self, mock_cleepconf):
         self.init_session()
         mock_cleepconf.return_value.is_auth_enabled.return_value = True
-        mock_cleepconf.return_value.get_auth_accounts.return_value = ['account']
-        self.module.auth_update_event.send = Mock(side_effect=Exception('bus down'))
+        mock_cleepconf.return_value.get_auth_accounts.return_value = ["account"]
+        self.module.auth_update_event.send = Mock(side_effect=Exception("bus down"))
         self.module.logger = Mock()
 
         result = self.module._Parameters__publish_auth_status()
@@ -1024,22 +1040,22 @@ class TestsParameters(unittest.TestCase):
         self.assertTrue(result)
         self.module.logger.exception.assert_called()
 
-    @patch('backend.parameters.requests.post')
+    @patch("backend.parameters.requests.post")
     def test_reload_rpcserver_auth_success(self, mock_post):
         self.init_session()
-        self.module.rpc_url = 'http://localhost:80'
+        self.module.rpc_url = "http://localhost:80"
         mock_post.return_value.raise_for_status = Mock()
 
         self.module._Parameters__reload_rpcserver_auth()
 
-        mock_post.assert_called_with('http://localhost:80/reloadauth', verify=False)
+        mock_post.assert_called_with("http://localhost:80/reloadauth", verify=False)
         mock_post.return_value.raise_for_status.assert_called()
 
-    @patch('backend.parameters.requests.post')
+    @patch("backend.parameters.requests.post")
     def test_reload_rpcserver_auth_failure(self, mock_post):
         self.init_session()
-        self.module.rpc_url = 'http://localhost:80'
-        mock_post.side_effect = Exception('connection refused')
+        self.module.rpc_url = "http://localhost:80"
+        mock_post.side_effect = Exception("connection refused")
         self.module.logger = Mock()
 
         self.module._Parameters__reload_rpcserver_auth()
@@ -1050,168 +1066,153 @@ class TestsParameters(unittest.TestCase):
 class TestsParametersAuthUpdateEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
         params = {
-            'internal_bus': Mock(),
-            'formatters_broker': Mock(),
-            'get_external_bus_name': None,
+            "internal_bus": Mock(),
+            "formatters_broker": Mock(),
+            "get_external_bus_name": None,
         }
         self.event = ParametersAuthUpdateEvent(params)
 
     def test_event_params(self):
-        self.assertEqual(self.event.EVENT_NAME, 'parameters.auth.update')
+        self.assertEqual(self.event.EVENT_NAME, "parameters.auth.update")
         self.assertTrue(self.event.EVENT_PROPAGATE)
-        self.assertEqual(self.event.EVENT_PARAMS, ['enabled'])
+        self.assertEqual(self.event.EVENT_PARAMS, ["enabled"])
 
 
 class TestsParametersCountryUpdateEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        params = { 
-            'internal_bus': Mock(),
-            'formatters_broker': Mock(),
-            'get_external_bus_name': None,
-        }   
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
+        params = {
+            "internal_bus": Mock(),
+            "formatters_broker": Mock(),
+            "get_external_bus_name": None,
+        }
         self.event = ParametersCountryUpdateEvent(params)
 
     def test_event_params(self):
-        self.assertEqual(self.event.EVENT_PARAMS, ['country', 'alpha2'])
-
-
-
+        self.assertEqual(self.event.EVENT_PARAMS, ["country", "alpha2"])
 
 
 class TestsParametersHostnameUpdateEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        params = { 
-            'internal_bus': Mock(),
-            'formatters_broker': Mock(),
-            'get_external_bus_name': None,
-        }   
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
+        params = {
+            "internal_bus": Mock(),
+            "formatters_broker": Mock(),
+            "get_external_bus_name": None,
+        }
         self.event = ParametersHostnameUpdateEvent(params)
 
     def test_event_params(self):
-        self.assertEqual(self.event.EVENT_PARAMS, ['hostname'])
-
-
-
+        self.assertEqual(self.event.EVENT_PARAMS, ["hostname"])
 
 
 class TestsParametersTimeNowEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        params = { 
-            'internal_bus': Mock(),
-            'formatters_broker': Mock(),
-            'get_external_bus_name': None,
-        }   
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
+        params = {
+            "internal_bus": Mock(),
+            "formatters_broker": Mock(),
+            "get_external_bus_name": None,
+        }
         self.event = ParametersTimeNowEvent(params)
 
     def test_event_params(self):
-        self.assertEqual(self.event.EVENT_PARAMS, ['timestamp', 'iso', 'year', 'month', 'day', 'hour', 'minute', 'weekday', 'weekday_literal', 'sunset', 'sunrise'])
-
-
-
+        self.assertEqual(
+            self.event.EVENT_PARAMS,
+            ["timestamp", "iso", "year", "month", "day", "hour", "minute", "weekday", "weekday_literal", "sunset", "sunrise"],
+        )
 
 
 class TestsParametersTimeSunriseEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        params = { 
-            'internal_bus': Mock(),
-            'formatters_broker': Mock(),
-            'get_external_bus_name': None,
-        }   
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
+        params = {
+            "internal_bus": Mock(),
+            "formatters_broker": Mock(),
+            "get_external_bus_name": None,
+        }
         self.event = ParametersTimeSunriseEvent(params)
 
     def test_event_params(self):
         self.assertEqual(self.event.EVENT_PARAMS, [])
 
 
-
-
-
 class TestsParametersTimeSunsetEvent(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
-        params = { 
-            'internal_bus': Mock(),
-            'formatters_broker': Mock(),
-            'get_external_bus_name': None,
-        }   
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
+        params = {
+            "internal_bus": Mock(),
+            "formatters_broker": Mock(),
+            "get_external_bus_name": None,
+        }
         self.event = ParametersTimeSunsetEvent(params)
 
     def test_event_params(self):
         self.assertEqual(self.event.EVENT_PARAMS, [])
 
 
-
-
-
 class TestsTimeToMessageFormatter(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
         events_broker = Mock()
-        self.formatter = TimeToMessageFormatter({'events_broker': events_broker})
+        self.formatter = TimeToMessageFormatter({"events_broker": events_broker})
 
     def test_fill_profile(self):
         event_params = {
-            'timestamp': 1618220940,
-            'iso': '1970-01-19T18:30:20+01:00',
-            'year': 2021,
-            'month': 4,
-            'day': 12,
-            'hour': 9,
-            'minute': 49,
-            'weekday': 0,
-            'weekday_literal': 'monday',
-            'sunset': 1618259400,
-            'sunrise': 1618216200,
+            "timestamp": 1618220940,
+            "iso": "1970-01-19T18:30:20+01:00",
+            "year": 2021,
+            "month": 4,
+            "day": 12,
+            "hour": 9,
+            "minute": 49,
+            "weekday": 0,
+            "weekday_literal": "monday",
+            "sunset": 1618259400,
+            "sunrise": 1618216200,
         }
         profile = Mock()
         profile = self.formatter._fill_profile(event_params, profile)
-        
-        self.assertEqual(profile.message, '09:49 12/04/2021')
 
+        self.assertEqual(profile.message, "09:49 12/04/2021")
 
 
 class TestsTimeToIdentifiedMessageFormatter(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s")
         events_broker = Mock()
-        self.formatter = TimeToIdentifiedMessageFormatter({'events_broker': events_broker})
+        self.formatter = TimeToIdentifiedMessageFormatter({"events_broker": events_broker})
 
     def test_fill_profile(self):
         event_params = {
-            'timestamp': 1618220940,
-            'iso': '1970-01-19T18:30:20+01:00',
-            'year': 2021,
-            'month': 4,
-            'day': 12,
-            'hour': 9,
-            'minute': 49,
-            'weekday': 0,
-            'weekday_literal': 'monday',
-            'sunset': 1618259400,
-            'sunrise': 1618216200,
+            "timestamp": 1618220940,
+            "iso": "1970-01-19T18:30:20+01:00",
+            "year": 2021,
+            "month": 4,
+            "day": 12,
+            "hour": 9,
+            "minute": 49,
+            "weekday": 0,
+            "weekday_literal": "monday",
+            "sunset": 1618259400,
+            "sunrise": 1618216200,
         }
         profile = Mock()
         profile = self.formatter._fill_profile(event_params, profile)
-        
-        self.assertEqual(profile.id, 'currenttime')
-        self.assertEqual(profile.message, '09:49 12/04/2021')
+
+        self.assertEqual(profile.id, "currenttime")
+        self.assertEqual(profile.message, "09:49 12/04/2021")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # coverage run --include="**/backend/**/*.py" --concurrency=thread test_parameters.py; coverage report -m -i
     unittest.main()
-    

@@ -17,9 +17,7 @@ class TimeToIdentifiedMessageFormatter(ProfileFormatter):
         Args:
             params (dict): formatter parameters
         """
-        ProfileFormatter.__init__(
-            self, params, "parameters.time.now", IdentifiedMessageProfile()
-        )
+        ProfileFormatter.__init__(self, params, "parameters.time.now", IdentifiedMessageProfile())
 
     def _fill_profile(self, event_params, profile):
         """

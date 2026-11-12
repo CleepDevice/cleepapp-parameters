@@ -8,5 +8,6 @@ docs/*.xml
 docs/source
 docs/_build
 .vscode
+.venv/
 .pytest_cache/
 **/*.swp

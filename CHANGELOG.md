@@ -9,6 +9,7 @@
 - Use config-tabs from Cleep design system
 - Raise backend unit-test coverage to 100% (auth publish/reload, timezone success path, configure/on_stop, sun/country edge cases)
 - Bump prebuilt wheels to numpy 2.0.2 and scipy 1.13.1 (Python 3.9 / bullseye armv7l)
+- Add black/isort pre-commit hooks (same setup as cleepapp-update)
 
 ### Added
 

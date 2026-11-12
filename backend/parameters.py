@@ -1,26 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
-import time
 import copy
-import importlib
-import re
 import datetime
+import importlib
+import os
+import re
+import time
+
 import requests
 import reverse_geocode
-from timezonefinder import TimezoneFinder
-from pytz import utc, timezone
-from tzlocal import get_localzone
-from pycountry_convert import (
-    country_alpha2_to_continent_code,
-    convert_continent_code_to_continent_name,
-)
 from cleep.core import CleepModule
 from cleep.exception import CommandError, InvalidParameter, MissingParameter
-from cleep.libs.configs.hostname import Hostname
-from cleep.libs.internals.sun import Sun
-from cleep.libs.internals.console import Console
 from cleep.libs.configs.cleepconf import CleepConf
+from cleep.libs.configs.hostname import Hostname
+from cleep.libs.internals.console import Console
+from cleep.libs.internals.sun import Sun
+from pycountry_convert import (
+    convert_continent_code_to_continent_name,
+    country_alpha2_to_continent_code,
+)
+from pytz import timezone, utc
+from timezonefinder import TimezoneFinder
+from tzlocal import get_localzone
 
 __all__ = ["Parameters"]
 
@@ -46,9 +47,7 @@ class Parameters(CleepModule):
     MODULE_CATEGORY = "APPLICATION"
     MODULE_DEPS = []
     MODULE_DESCRIPTION = "Configure generic parameters of your device"
-    MODULE_LONGDESCRIPTION = (
-        "Application that helps you to configure generic parameters of your device"
-    )
+    MODULE_LONGDESCRIPTION = "Application that helps you to configure generic parameters of your device"
     MODULE_TAGS = [
         "configuration",
         "date",
@@ -103,8 +102,7 @@ class Parameters(CleepModule):
         self.cleep_conf = CleepConf(self.cleep_filesystem)
         # code from https://stackoverflow.com/a/106223
         self.__hostname_pattern = (
-            r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*"
-            r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
+            r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*" r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
         )
         self.rpc_url = bootstrap.get("rpc_config", {}).get("url")
 
@@ -169,9 +167,7 @@ class Parameters(CleepModule):
             timer.start()
 
         # Defer auth publish so inventory message loop / app_configured are ready
-        auth_task = self.task_factory.create_task(
-            None, self.__publish_auth_status_with_retry
-        )
+        auth_task = self.task_factory.create_task(None, self.__publish_auth_status_with_retry)
         auth_task.start()
 
     def _on_stop(self):
@@ -214,9 +210,7 @@ class Parameters(CleepModule):
         for device in devices.values():
             if device["type"] == "clock":
                 data = self.__format_time()
-                data.update(
-                    {"sunrise": self.suns["sunrise"], "sunset": self.suns["sunset"]}
-                )
+                data.update({"sunrise": self.suns["sunrise"], "sunset": self.suns["sunset"]})
                 device.update(data)
 
         return devices
@@ -295,25 +289,17 @@ class Parameters(CleepModule):
 
         # send now event
         now_event_params = copy.deepcopy(now_formatted)
-        now_event_params.update(
-            {"sunrise": self.suns["sunrise"], "sunset": self.suns["sunset"]}
-        )
+        now_event_params.update({"sunrise": self.suns["sunrise"], "sunset": self.suns["sunset"]})
         self.time_now_event.send(params=now_event_params, device_id=self.__clock_uuid)
 
         # send sunrise event
         if self.sunrise:
-            if (
-                now_formatted["hour"] == self.sunrise.hour
-                and now_formatted["minute"] == self.sunrise.minute
-            ):
+            if now_formatted["hour"] == self.sunrise.hour and now_formatted["minute"] == self.sunrise.minute:
                 self.time_sunrise_event.send(device_id=self.__clock_uuid)
 
         # send sunset event
         if self.sunset:
-            if (
-                now_formatted["hour"] == self.sunset.hour
-                and now_formatted["minute"] == self.sunset.minute
-            ):
+            if now_formatted["hour"] == self.sunset.hour and now_formatted["minute"] == self.sunset.minute:
                 self.time_sunset_event.send(device_id=self.__clock_uuid)
 
         # update sun times after midnight
@@ -480,9 +466,7 @@ class Parameters(CleepModule):
         # get position
         position = self._get_config_field("position")
         if not position["latitude"] and not position["longitude"]:
-            self.logger.debug(
-                "Unable to set country from unspecified position (%s)", position
-            )
+            self.logger.debug("Unable to set country from unspecified position (%s)", position)
             return
 
         # get country from position
@@ -493,12 +477,7 @@ class Parameters(CleepModule):
             # need a tuple
             geo = reverse_geocode.search(coordinates)
             self.logger.debug("Found country infos from position %s: %s", position, geo)
-            if (
-                geo
-                and len(geo) > 0
-                and "country_code" in geo[0]
-                and "country" in geo[0]
-            ):
+            if geo and len(geo) > 0 and "country_code" in geo[0] and "country" in geo[0]:
                 country["alpha2"] = geo[0]["country_code"]
                 country["country"] = geo[0]["country"]
 
@@ -543,33 +522,25 @@ class Parameters(CleepModule):
         # get position
         position = self._get_config_field("position")
         if not position["latitude"] and not position["longitude"]:
-            self.logger.warning(
-                "Unable to set timezone from unspecified position (%s)", position
-            )
+            self.logger.warning("Unable to set timezone from unspecified position (%s)", position)
             return False
 
         # compute timezone
         current_timezone = None
         try:
             # try to find timezone at position
-            current_timezone = self.timezonefinder.timezone_at(
-                lat=position["latitude"], lng=position["longitude"]
-            )
+            current_timezone = self.timezonefinder.timezone_at(lat=position["latitude"], lng=position["longitude"])
             if current_timezone is None:
                 # extend search to closest position
                 # TODO increase delta_degree to extend research, careful it use more CPU !
-                current_timezone = self.timezonefinder.closest_timezone_at(
-                    lat=position["latitude"], lng=position["longitude"]
-                )
+                current_timezone = self.timezonefinder.closest_timezone_at(lat=position["latitude"], lng=position["longitude"])
         except ValueError:
             # the coordinates were out of bounds
             self.logger.exception("Coordinates out of bounds")
         except Exception:
             self.logger.exception("Error occured searching timezone at position")
         if not current_timezone:
-            self.logger.warning(
-                "Unable to set device timezone because it was not found"
-            )
+            self.logger.warning("Unable to set device timezone because it was not found")
             return False
 
         # save timezone value
@@ -581,18 +552,12 @@ class Parameters(CleepModule):
         zoneinfo = os.path.join(self.SYSTEM_ZONEINFO_DIR, current_timezone)
         self.logger.debug("Checking zoneinfo file: %s", zoneinfo)
         if not os.path.exists(zoneinfo):
-            raise CommandError(
-                f'No system file found for "{current_timezone}" timezone'
-            )
+            raise CommandError(f'No system file found for "{current_timezone}" timezone')
         self.logger.debug('zoneinfo file "%s" exists', zoneinfo)
         self.cleep_filesystem.rm(self.SYSTEM_LOCALTIME)
 
-        self.logger.debug(
-            'Writing timezone "%s" in "%s"', current_timezone, self.SYSTEM_TIMEZONE
-        )
-        if not self.cleep_filesystem.write_data(
-            self.SYSTEM_TIMEZONE, f"{current_timezone}"
-        ):
+        self.logger.debug('Writing timezone "%s" in "%s"', current_timezone, self.SYSTEM_TIMEZONE)
+        if not self.cleep_filesystem.write_data(self.SYSTEM_TIMEZONE, f"{current_timezone}"):
             self.logger.error(
                 'Unable to write timezone data on "%s". System timezone is not configured!',
                 self.SYSTEM_TIMEZONE,
@@ -654,17 +619,11 @@ class Parameters(CleepModule):
         try:
             country = self._get_config_field("country")
             continent_code = country_alpha2_to_continent_code(country["alpha2"])
-            continent_name = convert_continent_code_to_continent_name(
-                continent_code
-            ).lower()
-            continent_name = (
-                continent_name.lower().replace("south", "").replace("north", "").strip()
-            )
+            continent_name = convert_continent_code_to_continent_name(continent_code).lower()
+            continent_name = continent_name.lower().replace("south", "").replace("north", "").strip()
 
             workalendar = importlib.import_module(f"workalendar.{continent_name}")
-            fixed_country = "".join(
-                [part.capitalize() for part in country["country"].split()]
-            )
+            fixed_country = "".join([part.capitalize() for part in country["country"].split()])
             _class = getattr(workalendar, fixed_country)
             _instance = _class()
             year = year or datetime.datetime.now().year
@@ -817,9 +776,7 @@ class Parameters(CleepModule):
         """
         Same rule as the RPC server: flag on and at least one account.
         """
-        return bool(
-            self.cleep_conf.is_auth_enabled() and self.cleep_conf.get_auth_accounts()
-        )
+        return bool(self.cleep_conf.is_auth_enabled() and self.cleep_conf.get_auth_accounts())
 
     def __publish_auth_status(self, quiet=False):
         """
@@ -836,13 +793,9 @@ class Parameters(CleepModule):
         resp = self.send_command("set_auth_enabled", "inventory", {"enabled": enabled})
         if resp and resp.error:
             if quiet:
-                self.logger.debug(
-                    "Unable to publish auth status to inventory: %s", resp.message
-                )
+                self.logger.debug("Unable to publish auth status to inventory: %s", resp.message)
             else:
-                self.logger.error(
-                    "Unable to publish auth status to inventory: %s", resp.message
-                )
+                self.logger.error("Unable to publish auth status to inventory: %s", resp.message)
             return False
 
         try:
