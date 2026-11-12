@@ -7,6 +7,7 @@
 - Replace `postinst.sh` with declarative `scripts/postinst.json`
 - Migrate tests to fit core changes
 - Use config-tabs from Cleep design system
+- Raise backend unit-test coverage to 100% (auth publish/reload, timezone success path, configure/on_stop, sun/country edge cases)
 
 ### Added
 
