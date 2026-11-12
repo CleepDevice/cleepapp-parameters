@@ -415,7 +415,7 @@ class TestsParameters(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Parameter "latitude" is missing')
 
         with self.assertRaises(InvalidParameter) as cm:
-            self.module.set_position(48, 2.2907284)
+            self.module.set_position('48.8591554', 2.2907284)
         self.assertEqual(str(cm.exception), 'Parameter "latitude" is invalid')
 
         with self.assertRaises(MissingParameter) as cm:
@@ -423,13 +423,52 @@ class TestsParameters(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Parameter "longitude" is missing')
 
         with self.assertRaises(InvalidParameter) as cm:
-            self.module.set_position(48.8591554, 2)
+            self.module.set_position(48.8591554, '2')
         self.assertEqual(str(cm.exception), 'Parameter "longitude" is invalid')
 
         self.module._set_config_field = Mock(return_value=False)
         with self.assertRaises(CommandError) as cm:
             self.module.set_position(48.8591554, 2.2907284)
         self.assertEqual(str(cm.exception), 'Unable to save position')
+
+    def test_set_position_accepts_int(self):
+        self.init_session()
+        self.module.set_timezone = MagicMock()
+        self.module.set_country = MagicMock()
+        self.module.set_sun = MagicMock()
+
+        self.module.set_position(48, 2)
+        position = self.module.get_position()
+        self.assertEqual(position['latitude'], 48.0)
+        self.assertEqual(position['longitude'], 2.0)
+        self.assertIsInstance(position['latitude'], float)
+        self.assertIsInstance(position['longitude'], float)
+
+    def test_set_sun_clears_when_position_unset(self):
+        self.init_session()
+        self.module.suns = {
+            'sunrise': 123,
+            'sunrise_iso': 'stale',
+            'sunset': 456,
+            'sunset_iso': 'stale',
+        }
+        self.module.sunrise = object()
+        self.module.sunset = object()
+        self.module._get_config_field = Mock(return_value={
+            'latitude': 0,
+            'longitude': 0,
+        })
+
+        self.module.set_sun()
+
+        self.assertIsNone(self.module.sunrise)
+        self.assertIsNone(self.module.sunset)
+        self.assertEqual(self.module.suns, {
+            'sunrise': 0,
+            'sunrise_iso': '',
+            'sunset': 0,
+            'sunset_iso': '',
+        })
 
     def test_get_country(self):
         self.init_session()

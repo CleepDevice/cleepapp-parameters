@@ -16,6 +16,12 @@
 ### Fixed
 
 - Map tiles fill the panel again when Localisation is opened from config-tabs (Leaflet `invalidateSize`)
+- Revert secured-access switch when enable/disable RPC fails
+- Accept integer latitude/longitude in `set_position` (JSON clients)
+- Clear stale sunrise/sunset values when position is unset
+- Ignore `__pycache__` / `.pytest_cache` in git
+- Align hostname help text with backend rules; fix auth/map copy typos
+- Allow map coordinates at 0°; wire config-map disabled binding
 
 ## [2.3.2] - 2024-11-11
 

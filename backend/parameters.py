@@ -392,15 +392,15 @@ class Parameters(CleepModule):
         """
         if latitude is None:
             raise MissingParameter('Parameter "latitude" is missing')
-        if not isinstance(latitude, float):
+        if not isinstance(latitude, (int, float)) or isinstance(latitude, bool):
             raise InvalidParameter('Parameter "latitude" is invalid')
         if longitude is None:
             raise MissingParameter('Parameter "longitude" is missing')
-        if not isinstance(longitude, float):
+        if not isinstance(longitude, (int, float)) or isinstance(longitude, bool):
             raise InvalidParameter('Parameter "longitude" is invalid')
 
-        # save new position
-        position = {"latitude": latitude, "longitude": longitude}
+        # save new position (normalize ints from JSON clients)
+        position = {"latitude": float(latitude), "longitude": float(longitude)}
 
         if not self._set_config_field("position", position):
             raise CommandError("Unable to save position")
@@ -448,15 +448,16 @@ class Parameters(CleepModule):
         return self.suns
 
     def set_sun(self):
-        """ "
+        """
         Compute sun times (sunrise and sunset) according to configured position
         """
         # get position
         position = self._get_config_field("position")
 
-        # compute sun times
+        # reset then recompute (avoids stale values when position is unset)
         self.sunset = None
         self.sunrise = None
+        self.suns = {"sunset": 0, "sunset_iso": "", "sunrise": 0, "sunrise_iso": ""}
         if position["latitude"] != 0 and position["longitude"] != 0:
             self.sun.set_position(position["latitude"], position["longitude"])
             self.sunset = self.sun.sunset().astimezone(self.timezone)
@@ -630,13 +631,11 @@ class Parameters(CleepModule):
             year (int, optional): get non working day for specified year. If not specified use current year. Defaults to None.
 
         Returns:
-            list: list of non working days of the year. List can be empty if error occured::
+            list: list of non working days of the year as ``(iso_date, label)``
+            tuples. List can be empty if error occured::
 
             [
-                {
-                    datetime (string): non working day (date in iso format YYYY-MM-DD)
-                    label (string): english name of non working day
-                },
+                (datetime (string), label (string)),
                 ...
             ]
 
@@ -718,7 +717,7 @@ class Parameters(CleepModule):
 
                 [
                     account1 (str),
-                    account2 (str,
+                    account2 (str),
                     ...
                 ]
 

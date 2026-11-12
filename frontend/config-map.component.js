@@ -8,7 +8,9 @@ angular.module('Cleep').component('configMap', {
                     cl-title="$ctrl.clTitle" cl-subtitle="$ctrl.clSubtitle">
                 </config-item-desc>
                 <config-item-save-button
-                    cl-btn-icon="$ctrl.clBtnIcon" cl-btn-style="$ctrl.clBtnStyle" cl-btn-color="$ctrl.clBtnColor" cl-btn-click="$ctrl.onClick" cl-btn-tooltip="$ctrl.clBtnTooltip" cl-btn-disabled="$ctrl.clBtnDisabled"
+                    cl-btn-icon="$ctrl.clBtnIcon" cl-btn-style="$ctrl.clBtnStyle"
+                    cl-btn-click="$ctrl.onClick" cl-btn-tooltip="$ctrl.clBtnTooltip"
+                    cl-btn-disabled="$ctrl.clDisabled"
                     cl-model="$ctrl.clModel" cl-meta="$ctrl.clMeta">
                 </config-item-save-button>
             </div>
@@ -22,7 +24,6 @@ angular.module('Cleep').component('configMap', {
         clTitle: '@',
         clIcon: '@',
         clIconClass: '@',
-        clBtnColor: '@',
         clBtnStyle: '@',
         clBtnIcon: '@',
         clBtnTooltip: '@',
@@ -63,13 +64,13 @@ angular.module('Cleep').component('configMap', {
         };
 
         ctrl.$onChanges = function (changes) {
-            if (changes.clLatitude?.currentValue) {
+            if (changes.clLatitude && angular.isNumber(changes.clLatitude.currentValue)) {
                 ctrl.position.lat = changes.clLatitude.currentValue;
             }
-            if (changes.clLongitude?.currentValue) {
+            if (changes.clLongitude && angular.isNumber(changes.clLongitude.currentValue)) {
                 ctrl.position.lng = changes.clLongitude.currentValue;
             }
-            if (changes.clZoom?.currentValue) {
+            if (changes.clZoom && angular.isNumber(changes.clZoom.currentValue)) {
                 ctrl.position.zoom = changes.clZoom.currentValue;
             }
         };

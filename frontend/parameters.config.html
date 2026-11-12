@@ -4,7 +4,7 @@
         <config-tab cl-id="hostname" cl-label="Device name" cl-icon="rename">
             <div layout="column" layout-padding>
                 <config-text
-                    cl-title="Set device name" cl-subtitle="Name must contain digits, chars and hyphens only. It cannot starts and ends with hyphen, cannot starts with digit."
+                    cl-title="Set device name" cl-subtitle="Letters, digits and hyphens only. Cannot start or end with a hyphen. Dots allowed for FQDN."
                     cl-btn-icon="rename"
                     cl-model="$ctrl.hostname" cl-click="$ctrl.setHostname()"
                 ></config-text>
@@ -16,9 +16,9 @@
                 <config-section cl-title="Device localisation" cl-icon="earth"></config-section>
                 <config-note
                     cl-icon="information-outline"
-                    cl-note="To adjust automatically device time and lang please center approximatively your device position on the map.<br>This will also allow the device to compute sunset and sunrise times.<br><br>Keep in mind that all your personal data remain private and stored only on your device."
+                    cl-note="To adjust automatically device time and lang please center approximately your device position on the map.<br>This will also allow the device to compute sunset and sunrise times.<br><br>Keep in mind that all your personal data remain private and stored only on your device."
                 ></config-note>
-                <config-map cl-title="Select approximative device position on map to compute localisation values"
+                <config-map cl-title="Select approximate device position on map to compute localisation values"
                     cl-latitude="$ctrl.position.latitude" cl-longitude="$ctrl.position.longitude"
                     cl-click="$ctrl.setPosition(latitude, longitude)"
                 ></config-map>
@@ -35,7 +35,7 @@
         <config-tab cl-id="auth" cl-label="Secured access" cl-icon="shield-lock">
             <div layout="column" layout-padding>
                 <config-switch
-                    cl-title="Enable secured access (at least one account must exists)"
+                    cl-title="Enable secured access (at least one account must exist)"
                     cl-icon="shield-lock" cl-model="$ctrl.auth.enabled" cl-click="$ctrl.setAuth(value)"
                 ></config-switch>
 

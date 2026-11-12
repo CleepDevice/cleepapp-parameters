@@ -4,16 +4,13 @@
  */
 angular
 .module('Cleep')
-.directive('parametersConfigComponent', ['toastService', 'parametersService', 'cleepService', '$timeout',
-function(toast, parametersService, cleepService, $timeout) {
+.directive('parametersConfigComponent', ['toastService', 'parametersService', 'cleepService',
+function(toast, parametersService, cleepService) {
 
     var parametersController = ['$scope', function($scope) {
         var self = this;
         self.tabIndex = 'hostname';
-        self.sunset = null;
-        self.sunrise = null;
         self.hostname = '';
-        self.hostnamePattern = '^[a-zA-Z][0-9a-zA-Z\-]{3,}[^-]$';
         self.position = {
             latitude: 0,
             longitude: 0
@@ -49,21 +46,22 @@ function(toast, parametersService, cleepService, $timeout) {
          */
         self.setHostname = function() {
             parametersService.setHostname(self.hostname)
-                .then(function(resp) {
+                .then(function() {
                     return cleepService.reloadModuleConfig('parameters');
                 })
                 .then(function(config) {
                     self.updateConfig(config);
                     toast.success('Device name saved');
-                });
+                })
+                .catch(angular.noop);
         };
 
         /**
          * Position
          */
         self.setPosition = function(latitude, longitude) {
-            // check values
-            if (!latitude || !longitude) {
+            if (typeof latitude !== 'number' || typeof longitude !== 'number'
+                    || Number.isNaN(latitude) || Number.isNaN(longitude)) {
                 toast.info('Please select position before setting position');
                 return;
             }
@@ -78,7 +76,8 @@ function(toast, parametersService, cleepService, $timeout) {
                 .then(function(config) {
                     self.updateConfig(config);
                     toast.success('Localisation saved');
-                });
+                })
+                .catch(angular.noop);
         };
 
         /**
@@ -90,6 +89,10 @@ function(toast, parametersService, cleepService, $timeout) {
                 .then((config) => {
                     self.updateConfig(config);
                     toast.success('Secured access updated');
+                })
+                .catch(() => {
+                    // Switch already flipped via ng-model; restore backend state
+                    self.auth.enabled = !enabled;
                 });
         };
 
@@ -99,7 +102,8 @@ function(toast, parametersService, cleepService, $timeout) {
                 .then((config) => {
                     self.updateConfig(config, true);
                     toast.success('Account deleted');
-                });
+                })
+                .catch(angular.noop);
         };
 
         self.addAuthAccount = function() {
@@ -110,7 +114,8 @@ function(toast, parametersService, cleepService, $timeout) {
                     self.newAccount = '';
                     self.newPassword = '';
                     toast.success('Account created');
-                });
+                })
+                .catch(angular.noop);
         };
 
         /**
@@ -148,4 +153,3 @@ function(toast, parametersService, cleepService, $timeout) {
         controllerAs: '$ctrl',
     };
 }]);
-
